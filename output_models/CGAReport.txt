@@ -1,0 +1,499 @@
+  0     2 'Footprint Area (m2)' 2535.26
+  0     2 'Lot Coverage (%)' 100
+  0   124 'GFA.Retail#color' '#80b5ff'
+  0   125 'GFA.Retail' 2535.26
+  0   125 'FAR.Retail' 1
+  0   125 'NumJobs.Retail' 55
+  0   125 'Usage' 'Retail'
+  0   127 'GFA.Retail#color' '#80b5ff'
+  0   128 'GFA.Retail' 2535.26
+  0   128 'FAR.Retail' 1
+  0   128 'NumJobs.Retail' 55
+  0   128 'Usage' 'Retail'
+  0   130 'GFA.Residential#color' '#b0d5ff'
+  0   131 'GFA.Residential' 2535.26
+  0   131 'FAR.Residential' 1
+  0   131 'NumApartments' 33
+  0   131 'Usage' 'Residential'
+  0   133 'GFA.Residential#color' '#b0d5ff'
+  0   134 'GFA.Residential' 2535.26
+  0   134 'FAR.Residential' 1
+  0   134 'NumApartments' 33
+  0   134 'Usage' 'Residential'
+  0   136 'GFA.Residential#color' '#b0d5ff'
+  0   137 'GFA.Residential' 2535.26
+  0   137 'FAR.Residential' 1
+  0   137 'NumApartments' 33
+  0   137 'Usage' 'Residential'
+  0   139 'GFA.Residential#color' '#b0d5ff'
+  0   140 'GFA.Residential' 2535.26
+  0   140 'FAR.Residential' 1
+  0   140 'NumApartments' 33
+  0   140 'Usage' 'Residential'
+  0   142 'GFA.Residential#color' '#b0d5ff'
+  0   143 'GFA.Residential' 2535.26
+  0   143 'FAR.Residential' 1
+  0   143 'NumApartments' 33
+  0   143 'Usage' 'Residential'
+  0   145 'GFA.Residential#color' '#b0d5ff'
+  0   146 'GFA.Residential' 2535.26
+  0   146 'FAR.Residential' 1
+  0   146 'NumApartments' 33
+  0   146 'Usage' 'Residential'
+  0   148 'GFA.Residential#color' '#b0d5ff'
+  0   149 'GFA.Residential' 2535.26
+  0   149 'FAR.Residential' 1
+  0   149 'NumApartments' 33
+  0   149 'Usage' 'Residential'
+  0   151 'GFA.Residential#color' '#b0d5ff'
+  0   152 'GFA.Residential' 2535.26
+  0   152 'FAR.Residential' 1
+  0   152 'NumApartments' 33
+  0   152 'Usage' 'Residential'
+  0   154 'GFA.Residential#color' '#b0d5ff'
+  0   155 'GFA.Residential' 2535.26
+  0   155 'FAR.Residential' 1
+  0   155 'NumApartments' 33
+  0   155 'Usage' 'Residential'
+  0   157 'GFA.Residential#color' '#b0d5ff'
+  0   158 'GFA.Residential' 2535.26
+  0   158 'FAR.Residential' 1
+  0   158 'NumApartments' 33
+  0   158 'Usage' 'Residential'
+  0   160 'GFA.Residential#color' '#b0d5ff'
+  0   161 'GFA.Residential' 2535.26
+  0   161 'FAR.Residential' 1
+  0   161 'NumApartments' 33
+  0   161 'Usage' 'Residential'
+  0   163 'GFA.Residential#color' '#b0d5ff'
+  0   164 'GFA.Residential' 2535.26
+  0   164 'FAR.Residential' 1
+  0   164 'NumApartments' 33
+  0   164 'Usage' 'Residential'
+  0   166 'GFA.Residential#color' '#b0d5ff'
+  0   167 'GFA.Residential' 2535.26
+  0   167 'FAR.Residential' 1
+  0   167 'NumApartments' 33
+  0   167 'Usage' 'Residential'
+  0   169 'GFA.Residential#color' '#b0d5ff'
+  0   170 'GFA.Residential' 2535.26
+  0   170 'FAR.Residential' 1
+  0   170 'NumApartments' 33
+  0   170 'Usage' 'Residential'
+  0   172 'GFA.Residential#color' '#b0d5ff'
+  0   173 'GFA.Residential' 2535.26
+  0   173 'FAR.Residential' 1
+  0   173 'NumApartments' 33
+  0   173 'Usage' 'Residential'
+  0   175 'GFA.Residential#color' '#b0d5ff'
+  0   176 'GFA.Residential' 2535.26
+  0   176 'FAR.Residential' 1
+  0   176 'NumApartments' 33
+  0   176 'Usage' 'Residential'
+  0   178 'GFA.Residential#color' '#b0d5ff'
+  0   179 'GFA.Residential' 2535.26
+  0   179 'FAR.Residential' 1
+  0   179 'NumApartments' 33
+  0   179 'Usage' 'Residential'
+  0   181 'GFA.Residential#color' '#b0d5ff'
+  0   182 'GFA.Residential' 2535.26
+  0   182 'FAR.Residential' 1
+  0   182 'NumApartments' 33
+  0   182 'Usage' 'Residential'
+  0   184 'GFA.Residential#color' '#b0d5ff'
+  0   185 'GFA.Residential' 2535.26
+  0   185 'FAR.Residential' 1
+  0   185 'NumApartments' 33
+  0   185 'Usage' 'Residential'
+  0   187 'GFA.Residential#color' '#b0d5ff'
+  0   188 'GFA.Residential' 2535.26
+  0   188 'FAR.Residential' 1
+  0   188 'NumApartments' 33
+  0   188 'Usage' 'Residential'
+  0   190 'GFA.Residential#color' '#b0d5ff'
+  0   191 'GFA.Residential' 2535.26
+  0   191 'FAR.Residential' 1
+  0   191 'NumApartments' 33
+  0   191 'Usage' 'Residential'
+  0   193 'GFA.Residential#color' '#b0d5ff'
+  0   194 'GFA.Residential' 2535.26
+  0   194 'FAR.Residential' 1
+  0   194 'NumApartments' 33
+  0   194 'Usage' 'Residential'
+  0   196 'GFA.Residential#color' '#b0d5ff'
+  0   197 'GFA.Residential' 2535.26
+  0   197 'FAR.Residential' 1
+  0   197 'NumApartments' 33
+  0   197 'Usage' 'Residential'
+  0   199 'GFA.Residential#color' '#b0d5ff'
+  0   200 'GFA.Residential' 2535.26
+  0   200 'FAR.Residential' 1
+  0   200 'NumApartments' 33
+  0   200 'Usage' 'Residential'
+  0   202 'GFA.Residential#color' '#b0d5ff'
+  0   203 'GFA.Residential' 2535.26
+  0   203 'FAR.Residential' 1
+  0   203 'NumApartments' 33
+  0   203 'Usage' 'Residential'
+  0   205 'GFA.Residential#color' '#b0d5ff'
+  0   206 'GFA.Residential' 2535.26
+  0   206 'FAR.Residential' 1
+  0   206 'NumApartments' 33
+  0   206 'Usage' 'Residential'
+  0   208 'GFA.Residential#color' '#b0d5ff'
+  0   209 'GFA.Residential' 2535.26
+  0   209 'FAR.Residential' 1
+  0   209 'NumApartments' 33
+  0   209 'Usage' 'Residential'
+  0   211 'GFA.Residential#color' '#b0d5ff'
+  0   212 'GFA.Residential' 2535.26
+  0   212 'FAR.Residential' 1
+  0   212 'NumApartments' 33
+  0   212 'Usage' 'Residential'
+  0   214 'GFA.Residential#color' '#b0d5ff'
+  0   215 'GFA.Residential' 2535.26
+  0   215 'FAR.Residential' 1
+  0   215 'NumApartments' 33
+  0   215 'Usage' 'Residential'
+  0   217 'GFA.Residential#color' '#b0d5ff'
+  0   218 'GFA.Residential' 2535.26
+  0   218 'FAR.Residential' 1
+  0   218 'NumApartments' 33
+  0   218 'Usage' 'Residential'
+  0   220 'GFA.Residential#color' '#b0d5ff'
+  0   221 'GFA.Residential' 2535.26
+  0   221 'FAR.Residential' 1
+  0   221 'NumApartments' 33
+  0   221 'Usage' 'Residential'
+  0   223 'GFA.Residential#color' '#b0d5ff'
+  0   224 'GFA.Residential' 2535.26
+  0   224 'FAR.Residential' 1
+  0   224 'NumApartments' 33
+  0   224 'Usage' 'Residential'
+  0   226 'GFA.Residential#color' '#b0d5ff'
+  0   227 'GFA.Residential' 2535.26
+  0   227 'FAR.Residential' 1
+  0   227 'NumApartments' 33
+  0   227 'Usage' 'Residential'
+  0   229 'GFA.Residential#color' '#b0d5ff'
+  0   230 'GFA.Residential' 2535.26
+  0   230 'FAR.Residential' 1
+  0   230 'NumApartments' 33
+  0   230 'Usage' 'Residential'
+  0   232 'GFA.Residential#color' '#b0d5ff'
+  0   233 'GFA.Residential' 2535.26
+  0   233 'FAR.Residential' 1
+  0   233 'NumApartments' 33
+  0   233 'Usage' 'Residential'
+  0   235 'GFA.Residential#color' '#b0d5ff'
+  0   236 'GFA.Residential' 2535.26
+  0   236 'FAR.Residential' 1
+  0   236 'NumApartments' 33
+  0   236 'Usage' 'Residential'
+  0   238 'GFA.Residential#color' '#b0d5ff'
+  0   239 'GFA.Residential' 2535.26
+  0   239 'FAR.Residential' 1
+  0   239 'NumApartments' 33
+  0   239 'Usage' 'Residential'
+  0   241 'GFA.Residential#color' '#b0d5ff'
+  0   242 'GFA.Residential' 2535.26
+  0   242 'FAR.Residential' 1
+  0   242 'NumApartments' 33
+  0   242 'Usage' 'Residential'
+  0   285 'FacadeOrientation.South' 212.154
+  0   285 'FacadeOrientation.East' 252.864
+  0   285 'FacadeOrientation.West' 252.864
+  0   285 'FacadeOrientation.North' 212.155
+  0   287 'FacadeOrientation.South' 175.258
+  0   287 'FacadeOrientation.East' 208.888
+  0   287 'FacadeOrientation.West' 208.888
+  0   287 'FacadeOrientation.North' 175.258
+  0   289 'FacadeOrientation.South' 175.258
+  0   289 'FacadeOrientation.East' 208.888
+  0   289 'FacadeOrientation.West' 208.888
+  0   289 'FacadeOrientation.North' 175.258
+  0   291 'FacadeOrientation.South' 175.258
+  0   291 'FacadeOrientation.East' 208.888
+  0   291 'FacadeOrientation.West' 208.888
+  0   291 'FacadeOrientation.North' 175.258
+  0   293 'FacadeOrientation.South' 175.258
+  0   293 'FacadeOrientation.East' 208.888
+  0   293 'FacadeOrientation.West' 208.888
+  0   293 'FacadeOrientation.North' 175.258
+  0   295 'FacadeOrientation.South' 175.258
+  0   295 'FacadeOrientation.East' 208.888
+  0   295 'FacadeOrientation.West' 208.888
+  0   295 'FacadeOrientation.North' 175.258
+  0   297 'FacadeOrientation.South' 175.258
+  0   297 'FacadeOrientation.East' 208.888
+  0   297 'FacadeOrientation.West' 208.888
+  0   297 'FacadeOrientation.North' 175.258
+  0   299 'FacadeOrientation.South' 175.258
+  0   299 'FacadeOrientation.East' 208.888
+  0   299 'FacadeOrientation.West' 208.888
+  0   299 'FacadeOrientation.North' 175.258
+  0   301 'FacadeOrientation.South' 175.258
+  0   301 'FacadeOrientation.East' 208.888
+  0   301 'FacadeOrientation.West' 208.888
+  0   301 'FacadeOrientation.North' 175.258
+  0   303 'FacadeOrientation.South' 175.258
+  0   303 'FacadeOrientation.East' 208.888
+  0   303 'FacadeOrientation.West' 208.888
+  0   303 'FacadeOrientation.North' 175.258
+  0   305 'FacadeOrientation.South' 175.258
+  0   305 'FacadeOrientation.East' 208.888
+  0   305 'FacadeOrientation.West' 208.888
+  0   305 'FacadeOrientation.North' 175.258
+  0   307 'FacadeOrientation.South' 175.258
+  0   307 'FacadeOrientation.East' 208.888
+  0   307 'FacadeOrientation.West' 208.888
+  0   307 'FacadeOrientation.North' 175.258
+  0   309 'FacadeOrientation.South' 175.258
+  0   309 'FacadeOrientation.East' 208.888
+  0   309 'FacadeOrientation.West' 208.888
+  0   309 'FacadeOrientation.North' 175.258
+  0   311 'FacadeOrientation.South' 175.258
+  0   311 'FacadeOrientation.East' 208.888
+  0   311 'FacadeOrientation.West' 208.888
+  0   311 'FacadeOrientation.North' 175.258
+  0   313 'FacadeOrientation.South' 175.258
+  0   313 'FacadeOrientation.East' 208.888
+  0   313 'FacadeOrientation.West' 208.888
+  0   313 'FacadeOrientation.North' 175.258
+  0   315 'FacadeOrientation.South' 175.258
+  0   315 'FacadeOrientation.East' 208.888
+  0   315 'FacadeOrientation.West' 208.888
+  0   315 'FacadeOrientation.North' 175.258
+  0   317 'FacadeOrientation.South' 175.258
+  0   317 'FacadeOrientation.East' 208.888
+  0   317 'FacadeOrientation.West' 208.888
+  0   317 'FacadeOrientation.North' 175.258
+  0   319 'FacadeOrientation.South' 175.258
+  0   319 'FacadeOrientation.East' 208.888
+  0   319 'FacadeOrientation.West' 208.888
+  0   319 'FacadeOrientation.North' 175.258
+  0   321 'FacadeOrientation.South' 175.258
+  0   321 'FacadeOrientation.East' 208.888
+  0   321 'FacadeOrientation.West' 208.888
+  0   321 'FacadeOrientation.North' 175.258
+  0   323 'FacadeOrientation.South' 175.258
+  0   323 'FacadeOrientation.East' 208.888
+  0   323 'FacadeOrientation.West' 208.888
+  0   323 'FacadeOrientation.North' 175.258
+  0   325 'FacadeOrientation.South' 175.258
+  0   325 'FacadeOrientation.East' 208.888
+  0   325 'FacadeOrientation.West' 208.888
+  0   325 'FacadeOrientation.North' 175.258
+  0   327 'FacadeOrientation.South' 175.258
+  0   327 'FacadeOrientation.East' 208.888
+  0   327 'FacadeOrientation.West' 208.888
+  0   327 'FacadeOrientation.North' 175.258
+  0   329 'FacadeOrientation.South' 175.258
+  0   329 'FacadeOrientation.East' 208.888
+  0   329 'FacadeOrientation.West' 208.888
+  0   329 'FacadeOrientation.North' 175.258
+  0   331 'FacadeOrientation.South' 175.258
+  0   331 'FacadeOrientation.East' 208.888
+  0   331 'FacadeOrientation.West' 208.888
+  0   331 'FacadeOrientation.North' 175.258
+  0   333 'FacadeOrientation.South' 175.258
+  0   333 'FacadeOrientation.East' 208.888
+  0   333 'FacadeOrientation.West' 208.888
+  0   333 'FacadeOrientation.North' 175.258
+  0   335 'FacadeOrientation.South' 175.258
+  0   335 'FacadeOrientation.East' 208.888
+  0   335 'FacadeOrientation.West' 208.888
+  0   335 'FacadeOrientation.North' 175.258
+  0   337 'FacadeOrientation.South' 175.258
+  0   337 'FacadeOrientation.East' 208.888
+  0   337 'FacadeOrientation.West' 208.888
+  0   337 'FacadeOrientation.North' 175.258
+  0   339 'FacadeOrientation.South' 175.258
+  0   339 'FacadeOrientation.East' 208.888
+  0   339 'FacadeOrientation.West' 208.888
+  0   339 'FacadeOrientation.North' 175.258
+  0   341 'FacadeOrientation.South' 175.258
+  0   341 'FacadeOrientation.East' 208.888
+  0   341 'FacadeOrientation.West' 208.888
+  0   341 'FacadeOrientation.North' 175.258
+  0   343 'FacadeOrientation.South' 175.258
+  0   343 'FacadeOrientation.East' 208.888
+  0   343 'FacadeOrientation.West' 208.888
+  0   343 'FacadeOrientation.North' 175.258
+  0   345 'FacadeOrientation.South' 175.258
+  0   345 'FacadeOrientation.East' 208.888
+  0   345 'FacadeOrientation.West' 208.888
+  0   345 'FacadeOrientation.North' 175.258
+  0   347 'FacadeOrientation.South' 175.258
+  0   347 'FacadeOrientation.East' 208.888
+  0   347 'FacadeOrientation.West' 208.888
+  0   347 'FacadeOrientation.North' 175.258
+  0   349 'FacadeOrientation.South' 175.258
+  0   349 'FacadeOrientation.East' 208.888
+  0   349 'FacadeOrientation.West' 208.888
+  0   349 'FacadeOrientation.North' 175.258
+  0   351 'FacadeOrientation.South' 175.258
+  0   351 'FacadeOrientation.East' 208.888
+  0   351 'FacadeOrientation.West' 208.888
+  0   351 'FacadeOrientation.North' 175.258
+  0   353 'FacadeOrientation.South' 175.258
+  0   353 'FacadeOrientation.East' 208.888
+  0   353 'FacadeOrientation.West' 208.888
+  0   353 'FacadeOrientation.North' 175.258
+  0   355 'FacadeOrientation.South' 175.258
+  0   355 'FacadeOrientation.East' 208.888
+  0   355 'FacadeOrientation.West' 208.888
+  0   355 'FacadeOrientation.North' 175.258
+  0   357 'FacadeOrientation.South' 175.258
+  0   357 'FacadeOrientation.East' 208.888
+  0   357 'FacadeOrientation.West' 208.888
+  0   357 'FacadeOrientation.North' 175.258
+  0   359 'FacadeOrientation.South' 175.258
+  0   359 'FacadeOrientation.East' 208.888
+  0   359 'FacadeOrientation.West' 208.888
+  0   359 'FacadeOrientation.North' 175.258
+  0   361 'FacadeOrientation.South' 175.258
+  0   361 'FacadeOrientation.East' 208.888
+  0   361 'FacadeOrientation.West' 208.888
+  0   361 'FacadeOrientation.North' 175.258
+  0   363 'FacadeOrientation.South' 175.258
+  0   363 'FacadeOrientation.East' 208.888
+  0   363 'FacadeOrientation.West' 208.888
+  0   363 'FacadeOrientation.North' 175.258
+  0     0 'Usage' 'Residential' [evalString]
+  0     0 'Default$Ground_Floor_Height' 4.5999999999999996447  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Ground_Floor_Height' 4.5999999999999996447  [evalFloat]
+  0     0 'Default$Setback_from_Street' 5  [evalFloat]
+  0     0 'Default$Green_Space.Setback_from_Street' 5  [evalFloat]
+  0     0 'Default$Standard_Floor_Height' 3.7999999999999998224  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Standard_Floor_Height' 3.7999999999999998224  [evalFloat]
+  0     0 'Default$Unit_Width' 15  [evalFloat]
+  0     0 'Default$Green_Space.Unit_Width' 15  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader.Representation' 'Fan' [evalString]
+  0     0 'Default$Elevation' -1.0267182870256138459e-25  [evalFloat]
+  0     0 'Default$Front_Setback_Distance' 2  [evalFloat]
+  0     0 'Default$Front_Setback_Mode' 'None' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Balconies' 'None' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Balcony_Depth' 2  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Balcony_Pattern' '[WB]*W' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Balcony_Width' 8  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Cill_Height' 0.2999999999999999889  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Frame_Color' '#999999' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Frame_Width' 0.10000000000000000555  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Frame_Depth' 0.2000000000000000111  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Generate_Facade' false [evalBool]
+  0     0 'Default$Generic_Modern_Facades.Glass_Material' 'CE Dark Blue' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Level_of_Detail' 'High' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Main_Pattern_A' '[WO]*W' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Main_Pattern_B' '[WO]*W' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Panel_Sampling_Point_Distance' 0.10000000000000000555  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Panel_Size' 5  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Panel_Width' 1  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Panels_Generate' 'None' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Parapet_Height' 0.4000000000000000222  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Railing_Height' 1  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Side_Pattern' 'Same as Main' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Slab_Thickness' 0.69999999999999995559  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Transparent' false [evalBool]
+  0     0 'Default$Generic_Modern_Facades.Wall_Color' '#ffffff' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Wall_Texture' 'buildings/wall_textures/concrete/wall_concrete_1.jpg' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Wall_Thickness' 0.4000000000000000222  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Wall_Width' 2  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Win_Height' 2.7999999999999998224  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.Win_Position' 'Wall Center' [evalString]
+  0     0 'Default$Generic_Modern_Facades.Win_Width' 4  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.floorIdx' -1  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.nFloors' -1  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.nTiles' -1  [evalFloat]
+  0     0 'Default$Generic_Modern_Facades.tileIdx' -1  [evalFloat]
+  0     0 'Default$Green_Space.Create_Trees' true [evalBool]
+  0     0 'Default$Green_Space.Generate_Green_Space' false [evalBool]
+  0     0 'Default$Green_Space.Level_of_Detail' 'low' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader.Name' 'Orange Tree' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader.Height' 5.9400000000000003908  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader.OverwriteColor' '' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader.Radius' 2.2200000000000001954  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader.RandomBrightness' false [evalBool]
+  0     0 'Default$Green_Space.Plant_Loader.RandomHeights' 'Mature and young' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader.RandomRotation' true [evalBool]
+  0     0 'Default$Green_Space.Plant_Loader.Reporting' 'None' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader.Transparency' 0  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader._modelNbr' 0  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader._nameEnumValues' (130x1) [Alder Buckthorn,Amazon Sword Plant,American Chestnut,American Sycamore,Apricot,Australian Pine,Baldcypress,Balsam Fir,Bamboo,Banana Tree,Basswood,Bay Laurel,Black Locust,Blue Gum Eucalyptus,Boxwood,Cabbage Palm Fern,California Bay,California Incense Cedar,California Palm,California Redwood,California Walnut,Coconut Palm,Common Hawthorn,Common Whitebeam,Conker Tree,Date Palm,Desert Willow,Douglas Fir,European Beech,European Larch,Ficus,Field Elm,Flannelbush,Flowering Dogwood,Generic Dead Tree,Generic Stump,Generic Unknown,Giant Sequoia,Hedgehog Agave,Japanese Angelica Tree,Lacy Tree Philodendron,Leyland Cypress,Lily Of The Valley,Lodgepole Pine,Mediterranean Buckthorn,Mexican Palmetto,Mountain Mahogany,Northern Red Oak,Norway Maple,Norway Spruce,Orange Tree,Orchid,Oval Leaved Privet,Palm Lily,Palo Verde,Paper Birch,Parlour Palm,Prickly Pear Cactus,Red Alder,Red Hickory,Rhododendron Azaleas,Rose,Ruffle Palm,Saguaro Cactus,Sassafras,Scots Pine,Sea Islands Yucca,Shadbush,Snake Plant,Southern Magnolia,Spanish Broom,Strawberry Tree,Sugar Maple,Sunflower,Sweetgum,Umbrella Acacia,Western Juniper,White Ash,White Oak,White Poplar,White Willow,Witch Hazel,
+,PROXIES,
+,Algarrobo,American Elderberry,American Pepper,American Silverberry,Athel Tamarisk,Avocado,Black Tupelo,Buttonbush,Canada Buffaloberry,Chinaberry Tree,Chinese Tallow Tree,Common Hackberry,Common Holly,Common Persimmon,Desert Bitterbrush,European Hornbeam,Giant Chinquapin,Honey Locust,Hophornbeam,Huckleberry Shrub,Japanese Hemlock,Japanese Nutmeg,Judas Tree,Lawson Cypress,Loblolly Bay,Mexican Buckeye,Necklacepod,Northern Bilberry,Northern White Cedar,Octopus Tree,Osage Orange,Paper Bark Tree,Pawpaw,Persian Silk Tree,Princess Tree,Smooth Sumac,Sourwood,Southern Wax Myrtle,Tanoak,Tree Of Heaven,Turkish Hazel,Western Soapberry,White Mulberry,Yellow Poplar,Yew] [evalStringArray]
+  0     0 'Default$Green_Space.Plant_Loader._plantHeight' 0  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader._plantName' '' [evalString]
+  0     0 'Default$Green_Space.Plant_Loader._plantNbr' 0  [evalFloat]
+  0     0 'Default$Green_Space.Plant_Loader._plantRadius' 0  [evalFloat]
+  0     0 'Default$Green_Space.Tree_Height' 15  [evalFloat]
+  0     0 'Default$Height_Variation__Min_Floors' 5  [evalFloat]
+  0     0 'Default$Height_Variation__Mode' 'None' [evalString]
+  0     0 'Default$Layout_Orientation' 'Open To Back' [evalString]
+  0     0 'Default$Layout_Shape' 'Along Street' [evalString]
+  0     0 'Default$Lot_Area' 2535.2637972224270015  [evalFloat]
+  0     0 'Default$Mass_Color' '#ffffff' [evalString]
+  0     0 'Default$Mode' 'Color By Usage' [evalString]
+  0     0 'Default$Nbr_of_Floors' 40  [evalFloat]
+  0     0 'Default$Offset_Distance' 5  [evalFloat]
+  0     0 'Default$Offset_Mode' 'None' [evalString]
+  0     0 'Default$Setback_from_Boundary' 3  [evalFloat]
+  0     0 'Default$Wing_Width' 13  [evalFloat]
+  0     0 'Residential_1$Generic_Modern_Facades.Balconies' 'On Rear' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Balcony_Pattern' 'Alternating' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Balcony_Width' 12  [evalFloat]
+  0     0 'Residential_1$Generic_Modern_Facades.Generate_Facade' true [evalBool]
+  0     0 'Residential_1$Generic_Modern_Facades.Glass_Material' 'CE Blue' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Main_Pattern_A' 'O[Wo]*WO' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Main_Pattern_B' 'o[WO]*Wo' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Side_Pattern' 'w[oW]*w' [evalString]
+  0     0 'Residential_1$Generic_Modern_Facades.Wall_Width' 3  [evalFloat]
+  0     0 'Residential_1$Generic_Modern_Facades.Win_Width' 4  [evalFloat]
+  0     0 'Residential_2$Generic_Modern_Facades.Balconies' 'On Rear' [evalString]
+  0     0 'Residential_2$Generic_Modern_Facades.Balcony_Width' 10  [evalFloat]
+  0     0 'Residential_2$Generic_Modern_Facades.Frame_Color' '#D4D4D4' [evalString]
+  0     0 'Residential_2$Generic_Modern_Facades.Generate_Facade' true [evalBool]
+  0     0 'Residential_2$Generic_Modern_Facades.Glass_Material' 'CE Black' [evalString]
+  0     0 'Residential_2$Generic_Modern_Facades.Panel_Width' 2  [evalFloat]
+  0     0 'Residential_2$Generic_Modern_Facades.Side_Pattern' 'w[oW]*w' [evalString]
+  0     0 'Residential_2$Generic_Modern_Facades.Wall_Texture' 'buildings/wall_textures/wood/wall_wood_2.jpg' [evalString]
+  0     0 'Residential_2$Generic_Modern_Facades.Wall_Width' 1  [evalFloat]
+  0     0 'Residential_2$Generic_Modern_Facades.Win_Width' 3  [evalFloat]
+  0     0 'Office_1$Generic_Modern_Facades.Balconies' 'None' [evalString]
+  0     0 'Office_1$Generic_Modern_Facades.Frame_Color' '#373737' [evalString]
+  0     0 'Office_1$Generic_Modern_Facades.Frame_Width' 0.17000000000000001221  [evalFloat]
+  0     0 'Office_1$Generic_Modern_Facades.Generate_Facade' true [evalBool]
+  0     0 'Office_1$Generic_Modern_Facades.Glass_Material' 'CE Black' [evalString]
+  0     0 'Office_1$Generic_Modern_Facades.Main_Pattern_B' 'o[WO]*Wo' [evalString]
+  0     0 'Office_1$Generic_Modern_Facades.Panel_Width' 1.5  [evalFloat]
+  0     0 'Office_1$Generic_Modern_Facades.Wall_Texture' 'buildings/wall_textures/stone/wall_stone_9.jpg' [evalString]
+  0     0 'Office_1$Generic_Modern_Facades.Wall_Width' 1  [evalFloat]
+  0     0 'Office_1$Generic_Modern_Facades.Win_Width' 3  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Balconies' 'None' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Cill_Height' 0  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Frame_Color' '#4E4E4E' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Generate_Facade' true [evalBool]
+  0     0 'Office_2$Generic_Modern_Facades.Glass_Material' 'CE Brown' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Main_Pattern_A' 'o[WO]*Wo' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Main_Pattern_B' 'o[WO]*Wo' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Panel_Width' 1  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Slab_Thickness' 0.5  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Wall_Texture' 'buildings/wall_textures/concrete/wall_concrete_7.jpg' [evalString]
+  0     0 'Office_2$Generic_Modern_Facades.Wall_Thickness' 0.2000000000000000111  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Wall_Width' 0.5  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Win_Height' 3.6000000000000000888  [evalFloat]
+  0     0 'Office_2$Generic_Modern_Facades.Win_Width' 6  [evalFloat]
+  0     0 'Office_3$Generic_Modern_Facades.Balconies' 'None' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Frame_Color' '#353535' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Frame_Width' 0.17000000000000001221  [evalFloat]
+  0     0 'Office_3$Generic_Modern_Facades.Generate_Facade' true [evalBool]
+  0     0 'Office_3$Generic_Modern_Facades.Glass_Material' 'CE Dark Blue' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Main_Pattern_A' 'O[Wo]*WO' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Main_Pattern_B' 'wo[WO]*Wow' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Panel_Width' 3  [evalFloat]
+  0     0 'Office_3$Generic_Modern_Facades.Wall_Texture' 'buildings/wall_textures/concrete/wall_concrete_9.jpg' [evalString]
+  0     0 'Office_3$Generic_Modern_Facades.Wall_Thickness' 0.69999999999999995559  [evalFloat]
+  0     0 'Office_3$Generic_Modern_Facades.Wall_Width' 3  [evalFloat]
+  0     0 'Office_3$Generic_Modern_Facades.Win_Width' 10  [evalFloat]
+  0     0 'Green$Green_Space.Generate_Green_Space' true [evalBool]
+  0     0 'Default$Usage' 'Residential' [evalString]

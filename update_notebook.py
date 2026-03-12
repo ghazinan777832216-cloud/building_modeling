@@ -1,121 +1,109 @@
-import nbformat
-import json
+ import json
+import os
 
-notebook_path = r'c:\Users\hisham\Desktop\building_modeling\pipeline.ipynb'
+print("Loading notebook...")
+with open('pipeline_new.ipynb', 'r', encoding='utf-8') as f:
+    nb = json.load(f)
 
-with open(notebook_path, 'r', encoding='utf-8') as f:
-    nb = nbformat.read(f, as_version=4)
+found = False
+for i, cell in enumerate(nb['cells']):
+    source_str = ''.join(cell.get('source', []))
+    if cell['cell_type'] == 'code' and 'html_code =' in source_str and 'Autodesk.Viewing' in source_str:
+        print(f"Found cell at index {i}")
+        found = True
+        code_cell = cell
+        
+        new_source = [
+            "import os\n",
+            "import webbrowser\n",
+            "from IPython.display import display, HTML\n",
+            "\n",
+            "html_code = f\"\"\"<!DOCTYPE html>\n",
+            "<html>\n",
+            "<head>\n",
+            "    <title>CityEngine Viewer</title>\n",
+            "    <meta charset=\\\"utf-8\\\">\n",
+            "    <style>\n",
+            "        body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }}\n",
+            "        #viewer-v15 {{ width: 100%; height: 100vh; background: linear-gradient(#f0f0f0, #c0c0c0); }}\n",
+            "        #log-v15 {{ position: absolute; top: 10px; left: 10px; color: #000; background: rgba(224, 224, 224, 0.8); padding: 10px; font-family: monospace; font-size: 12px; font-weight: bold; border-radius: 5px; z-index: 100; pointer-events: none; }}\n",
+            "    </style>\n",
+            "    <!-- Load Autodesk Viewer library -->\n",
+            "    <link rel=\"stylesheet\" href=\"https://developer.api.autodesk.com/modelderivative/v2/viewers/7.98/style.min.css\" type=\"text/css\">\n",
+            "    <script src='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.98/viewer3D.min.js'></script>\n",
+            "    <script src='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.98/extensions/glTF/glTF.min.js'></script>\n",
+            "</head>\n",
+            "<body>\n",
+            "    <div id='viewer-v15'></div>\n",
+            "    <div id='log-v15'>Initializing Authentic CityEngine Viewer...</div>\n",
+            "\n",
+            "    <script>\n",
+            "    (function() {{\n",
+            "        const log = (m) => document.getElementById('log-v15').innerText = '> ' + m;\n",
+            "        \n",
+            "        function b64ToBlob(b64) {{\n",
+            "            const bin = atob(b64);\n",
+            "            const buf = new Uint8Array(bin.length);\n",
+            "            for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);\n",
+            "            return new Blob([buf], {{type: 'model/gltf-binary'}});\n",
+            "        }}\n",
+            "\n",
+            "        function start() {{\n",
+            "            if (typeof Autodesk === 'undefined' || typeof Autodesk.Viewing.Extensions.glTF === 'undefined') {{\n",
+            "                setTimeout(start, 500); return;\n",
+            "            }}\n",
+            "            \n",
+            "            Autodesk.Viewing.Initializer({{ env: 'Local' }}, function() {{\n",
+            "                const viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('viewer-v15'));\n",
+            "                viewer.start();\n",
+            "                \n",
+            "                viewer.setTheme('light-theme');\n",
+            "                viewer.setEnvMapBackground(true);\n",
+            "                viewer.setLightPreset(2);\n",
+            "                viewer.setQualityLevel(false, true);\n",
+            "                viewer.prefs.set('groundShadow', true);\n",
+            "                viewer.prefs.set('groundReflection', false);\n",
+            "                \n",
+            "                const url = URL.createObjectURL(b64ToBlob(\"{model_b64}\"));\n",
+            "                viewer.loadModel(url + '#.glb', {{ fileExt: 'glb' }}, () => {{\n",
+            "                    log('CityEngine Procedural Building Loaded Successfully.');\n",
+            "                    viewer.fitToView();\n",
+            "                }});\n",
+            "            }});\n",
+            "        }}\n",
+            "        start();\n",
+            "    }})();\n",
+            "    </script>\n",
+            "</body>\n",
+            "</html>\n",
+            "\"\"\"\n",
+            "\n",
+            "# حفظ الكود كملف HTML مستقل لفتحه في المتصفح وتجنب لاق النوت بوك\n",
+            "html_path = os.path.join(os.getcwd(), \"viewer.html\")\n",
+            "with open(html_path, \"w\", encoding=\"utf-8\") as f:\n",
+            "    f.write(html_code)\n",
+            "\n",
+            "# فتح المتصفح التلقائي\n",
+            "webbrowser.open('file:///' + html_path.replace('\\\\', '/'))\n",
+            "\n",
+            "# عرض رسالة ورابط في النوت بوك\n",
+            "display(HTML(f\"\"\"\n",
+            "<h3>✅ تم إنشاء الفيوور!</h3>\n",
+            "<p style='font-size: 16px; color: #333;'>تم استخراج الفيوور ليعمل في المتصفح لتجنب البطء واللاق في جوبيتر.</p>\n",
+            "<div style='margin-top: 15px;'>\n",
+            "    <a href='viewer.html' target='_blank' style='background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold;'>\n",
+            "        🌐 انقر هنا لفتح الفيوور في صفحة مستقلة\n",
+            "    </a>\n",
+            "</div>\n",
+            "\"\"\"))\n"
+        ]
+        code_cell['source'] = new_source
+        break
 
-print(f"Total cells: {len(nb.cells)}")
-
-# Update Notebook Description (Index 0)
-nb.cells[0].source = nb.cells[0].source.replace(
-    '4. Visualize the 3D model with pythreejs',
-    '4. Visualize the 3D model with Autodesk Viewer'
-)
-
-# Update Cell 3 (PyPRT) - Index 7
-# We want to replace the part after rule generation
-if 'generated_models = model_generator.generate_model' in nb.cells[7].source:
-    print("Found Cell 7 correctly.")
-    
-    # We want to insert the gltf_list logic before the final 'else:'
-    source = nb.cells[7].source
-    
-    gltf_logic = """
-    # ── Convert to glTF for Autodesk Viewer ──────────────────────────────────
-    import numpy as np
-    import trimesh
-    import json
-
-    vertices = np.array(gm.get_vertices(), dtype=np.float32).reshape(-1, 3)
-    raw_indices = gm.get_indices()
-    raw_faces = gm.get_faces()
-
-    triangles = []
-    offset = 0
-    for n in raw_faces:
-        face_indices = raw_indices[offset:offset + n]
-        for i in range(1, n - 1):
-            triangles.append([face_indices[0], face_indices[i], face_indices[i + 1]])
-        offset += n
-
-    mesh = trimesh.Trimesh(vertices=vertices, faces=triangles)
-    # Export to a self-contained glTF dictionary
-    gltf_data = mesh.export(file_type='gltf')
-    if isinstance(gltf_data, bytes):
-        gltf_data = gltf_data.decode('utf-8')
-    
-    if isinstance(gltf_data, str):
-        gltf_list = [json.loads(gltf_data)]
-    else:
-        if isinstance(gltf_data, dict) and 'model.gltf' in gltf_data:
-            gltf_list = [json.loads(gltf_data['model.gltf'])]
-        else:
-            gltf_list = [gltf_data]
-
-    print(f"\\n✅ تم تجهيز نموذج glTF للعرض في Autodesk Viewer (glTF prepared for Viewer)")
-"""
-    
-    if 'if report:' in source:
-        parts = source.split('if report:')
-        # parts[1] contains "print(...)\nelse:\n..."
-        if 'else:' in parts[1]:
-            report_part, else_part = parts[1].split('else:', 1)
-            nb.cells[7].source = parts[0] + 'if report:' + report_part + gltf_logic + 'else:' + else_part
-
-# Update Cell 4 Header - Index 8
-nb.cells[8].source = nb.cells[8].source.replace(
-    '## الخلية 4: عرض النموذج باستخدام pythreejs',
-    '## الخلية 4: عرض النموذج باستخدام Autodesk Viewer'
-).replace(
-    '## Cell 4: Visualize the Model with pythreejs',
-    '## Cell 4: Visualize the Model with Autodesk Viewer'
-)
-
-# Update Cell 4 Code - Index 9
-autodesk_code = """from IPython.display import HTML
-import json
-
-try:
-    gltf_list
-except NameError:
-    raise Exception(\"لم يتم توليد gltf_list بعد. نفّذ الخلية السابقة أولاً.\")
-
-# تحويل بيانات glTF إلى JSON
-model_data = json.dumps(gltf_list[0])
-
-html_code = f\"\"\"
-<div id='viewer' style='width:800px;height:600px;'></div>
-
-<script src='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js'></script>
-<link rel='stylesheet' href='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css'/>
-
-<script>
-var options = {{
-    env: 'Local'
-}};
-
-Autodesk.Viewing.Initializer(options, function() {{
-    var viewerDiv = document.getElementById('viewer');
-    var viewer = new Autodesk.Viewing.GuiViewer3D(viewerDiv);
-    viewer.start();
-
-    var gltf = {model_data};
-
-    var blob = new Blob([JSON.stringify(gltf)], {{type: 'application/json'}});
-    var url = URL.createObjectURL(blob);
-
-    viewer.loadModel(url);
-}});
-</script>
-\"\"\"
-
-HTML(html_code)"""
-
-nb.cells[9].source = autodesk_code
-
-with open(notebook_path, 'w', encoding='utf-8') as f:
-    nbformat.write(nb, f)
-
-print("Notebook updated successfully.")
+if found:
+    print("Writing notebook...")
+    with open('pipeline_new.ipynb', 'w', encoding='utf-8') as f:
+        json.dump(nb, f, indent=1, ensure_ascii=False)
+    print("Notebook updated!")
+else:
+    print("Cell not found!")
