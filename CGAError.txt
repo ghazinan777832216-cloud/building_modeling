@@ -1,1 +1,0 @@
-AssetWarning    0 'bin/Generic Modern Buildings_StartRuleFootprint.cgb' '' 'Potentially problematic CGAC version 1.16 : major number smaller than current (2.10). Recompiling with current CGA Compiler is recommended.'

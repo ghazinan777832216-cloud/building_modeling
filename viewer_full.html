@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three.js Viewer</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  font-family: 'Arial', sans-serif;
+  font-size: 11px;
+  background: #1a1a1a;
+  color: #ccc;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* ── Menu Bar ── */
+#menubar {
+  height: 26px;
+  background: #222;
+  border-bottom: 1px solid #111;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.menu-item {
+  padding: 0 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #ccc;
+  position: relative;
+  font-size: 11px;
+}
+.menu-item:hover { background: #333; }
+.menu-item.active { background: #333; }
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #252525;
+  border: 1px solid #111;
+  min-width: 140px;
+  z-index: 1000;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+.menu-item.active .dropdown { display: block; }
+.dropdown-item {
+  padding: 5px 14px;
+  cursor: pointer;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.dropdown-item:hover { background: #333; }
+.dropdown-item.disabled { opacity: 0.4; pointer-events: none; }
+.dropdown-sep { height: 1px; background: #111; margin: 3px 0; }
+.menu-autosave {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  color: #aaa;
+  font-size: 11px;
+}
+.checkbox-wrap {
+  width: 13px; height: 13px;
+  background: #f44;
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── App Body ── */
+#app {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left Panel (Scene) ── */
+#left-panel {
+  width: 200px;
+  background: #1a1a1a;
+  border-right: 1px solid #111;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+#left-panel-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #aaa;
+  border-bottom: 1px solid #111;
+  background: #222;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+#scene-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.tree-item {
+  padding: 3px 10px 3px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #bbb;
+  font-size: 11px;
+}
+.tree-item:hover { background: #2a2a2a; }
+.tree-item.selected { background: #336; color: #fff; }
+.tree-item .icon { font-size: 10px; opacity: 0.7; flex-shrink: 0; }
+.tree-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Viewport ── */
+#viewport-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+#viewport-toolbar {
+  height: 28px;
+  background: #222;
+  border-bottom: 1px solid #111;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.vp-select {
+  background: #333;
+  border: 1px solid #444;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+  height: 20px;
+}
+.vp-select:hover { border-color: #666; }
+.vp-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.vp-tool-btn {
+  width: 22px; height: 22px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: #aaa;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+.vp-tool-btn:hover { background: #333; border-color: #444; }
+.vp-tool-btn.active { background: #336; border-color: #559; color: #fff; }
+
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #222;
+}
+#viewport canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* stats overlay */
+#stats-overlay {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: #888;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  line-height: 1.7;
+  pointer-events: none;
+}
+
+/* axes gizmo */
+#axes-gizmo {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 128px;
+  height: 128px;
+  pointer-events: none;
+}
+
+/* loading overlay */
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,26,26,0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: opacity 0.4s;
+}
+#loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid #333;
+  border-top-color: #888;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-text { color: #aaa; font-size: 11px; margin-top: 12px; }
+.load-sub { color: #666; font-size: 10px; margin-top: 4px; }
+
+/* ── Right Panel ── */
+#right-panel {
+  width: 220px;
+  background: #1a1a1a;
+  border-left: 1px solid #111;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Top section tabs */
+.rp-tabs {
+  display: flex;
+  background: #222;
+  border-bottom: 1px solid #111;
+  flex-shrink: 0;
+}
+.rp-tab {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  color: #888;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-right: 1px solid #111;
+}
+.rp-tab:last-child { border-right: none; }
+.rp-tab:hover { color: #ccc; }
+.rp-tab.active { color: #fff; background: #2a2a2a; border-bottom: 2px solid #fff; }
+
+.rp-panel { display: none; flex: 1; overflow-y: auto; padding: 8px 0; }
+.rp-panel.active { display: block; }
+
+/* property rows */
+.prop-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  gap: 6px;
+  color: #aaa;
+  font-size: 11px;
+}
+.prop-label { flex: 0 0 90px; color: #888; }
+.prop-value {
+  flex: 1;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  min-width: 0;
+}
+.prop-select {
+  flex: 1;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+.prop-checkbox {
+  width: 14px; height: 14px;
+  cursor: pointer;
+  accent-color: #f44;
+}
+.prop-section {
+  padding: 5px 10px 3px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+.prop-btn {
+  flex: 1;
+  background: #333;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  display: block;
+  width: calc(100% - 20px);
+  margin: 0 10px 2px;
+}
+.prop-btn:hover { background: #3a3a3a; }
+
+/* Bottom rp section */
+#rp-bottom {
+  border-top: 1px solid #111;
+  flex-shrink: 0;
+}
+.rp-btabs {
+  display: flex;
+  background: #222;
+}
+.rp-btab {
+  flex: 1;
+  text-align: center;
+  padding: 5px 4px;
+  cursor: pointer;
+  color: #888;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-right: 1px solid #111;
+}
+.rp-btab:last-child { border-right: none; }
+.rp-btab.active { color: #fff; background: #2a2a2a; }
+.rp-bcontent {
+  height: 120px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  color: #777;
+  font-size: 10px;
+}
+.rp-assign-btn {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 4px 10px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 2px;
+}
+.rp-assign-btn:hover { background: #333; }
+
+/* ── Bottom Bar (playback) ── */
+#bottombar {
+  height: 28px;
+  background: #222;
+  border-top: 1px solid #111;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.play-btn {
+  width: 22px; height: 22px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 2px;
+  color: #aaa;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.play-btn:hover { background: #3a3a3a; color: #fff; }
+#anim-time {
+  color: #666;
+  font-size: 10px;
+  font-family: monospace;
+  margin-left: 4px;
+}
+
+/* scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+</style>
+</head>
+<body>
+
+<!-- ── Menu Bar ── -->
+<div id="menubar">
+  <div class="menu-item" id="menu-file" onclick="toggleMenu('file')">File
+    <div class="dropdown" id="drop-file">
+      <div class="dropdown-item" onclick="openInBrowser()">🌐 Open in Browser</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">New Scene</div>
+      <div class="dropdown-item disabled">Import</div>
+      <div class="dropdown-item disabled">Export GLB</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-edit" onclick="toggleMenu('edit')">Edit
+    <div class="dropdown" id="drop-edit">
+      <div class="dropdown-item disabled">Undo</div>
+      <div class="dropdown-item disabled">Redo</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item" onclick="resetCamera()">🎯 Focus Camera</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-add" onclick="toggleMenu('add')">Add
+    <div class="dropdown" id="drop-add">
+      <div class="dropdown-item disabled">Mesh</div>
+      <div class="dropdown-item disabled">Light</div>
+      <div class="dropdown-item disabled">Camera</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-view" onclick="toggleMenu('view')">View
+    <div class="dropdown" id="drop-view">
+      <div class="dropdown-item" onclick="toggleGrid()">🔲 Toggle Grid</div>
+      <div class="dropdown-item" onclick="toggleWireframe()">📐 Toggle Wireframe</div>
+      <div class="dropdown-item" onclick="toggleAutoRotate()">🔄 Auto Rotate</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">Full Screen</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-render" onclick="toggleMenu('render')">Render
+    <div class="dropdown" id="drop-render">
+      <div class="dropdown-item disabled">Render Image</div>
+      <div class="dropdown-item disabled">Render Video</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-help" onclick="toggleMenu('help')">Help
+    <div class="dropdown" id="drop-help">
+      <div class="dropdown-item" onclick="openInBrowser()">🌐 Open in Browser</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">About</div>
+    </div>
+  </div>
+  <div class="menu-autosave">
+    <div class="checkbox-wrap">✓</div>
+    autosave &nbsp;<span id="revision-label" style="color:#666">r1</span>
+  </div>
+</div>
+
+<!-- ── App Body ── -->
+<div id="app">
+
+  <!-- ── Left Panel ── -->
+  <div id="left-panel">
+    <div id="left-panel-header">Scene</div>
+    <div id="scene-tree">
+      <div class="tree-item selected" id="tree-scene">
+        <span class="icon">☰</span>
+        <span class="name">Scene</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Viewport ── -->
+  <div id="viewport-wrap">
+    <div id="viewport-toolbar">
+      <select class="vp-select" id="cam-select" onchange="switchCamera(this.value)">
+        <option value="perspective">CAMERA</option>
+        <option value="top">TOP</option>
+        <option value="front">FRONT</option>
+        <option value="side">SIDE</option>
+      </select>
+      <select class="vp-select" id="render-mode" onchange="switchRenderMode(this.value)">
+        <option value="solid">SOLID</option>
+        <option value="wireframe">WIREFRAME</option>
+        <option value="material">MATERIAL</option>
+      </select>
+      <div class="vp-tools">
+        <button class="vp-tool-btn active" id="btn-translate" title="Translate" onclick="setTool('translate')">✛</button>
+        <button class="vp-tool-btn" id="btn-rotate" title="Rotate" onclick="setTool('rotate')">↻</button>
+        <button class="vp-tool-btn" id="btn-scale" title="Scale" onclick="setTool('scale')">⤢</button>
+      </div>
+    </div>
+
+    <div id="viewport">
+      <!-- Loading Overlay -->
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="load-text">Loading Model...</div>
+        <div class="load-sub" id="load-sub">Initializing</div>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-overlay">
+        <div id="stat-objects">0 objects</div>
+        <div id="stat-verts">0 vertices</div>
+        <div id="stat-tris">0 triangles</div>
+        <div id="stat-render">- render time</div>
+      </div>
+
+      <!-- Axes gizmo canvas -->
+      <canvas id="axes-gizmo" width="80" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Right Panel ── -->
+  <div id="right-panel">
+
+    <!-- Top tabs: SCENE / PROJECT / SETTINGS -->
+    <div class="rp-tabs">
+      <div class="rp-tab active" onclick="switchRpTab('scene', this)">SCENE</div>
+      <div class="rp-tab" onclick="switchRpTab('project', this)">PROJECT</div>
+      <div class="rp-tab" onclick="switchRpTab('settings', this)">SETTINGS</div>
+    </div>
+
+    <!-- SCENE panel -->
+    <div class="rp-panel active" id="rp-scene">
+      <div class="prop-section">Background</div>
+      <div class="prop-row">
+        <span class="prop-label">Color</span>
+        <input type="color" value="#1a1a1a" class="prop-value" style="cursor:pointer;padding:1px" onchange="setBgColor(this.value)">
+      </div>
+      <div class="prop-section">Fog</div>
+      <div class="prop-row">
+        <span class="prop-label">Type</span>
+        <select class="prop-select">
+          <option>None</option>
+          <option>Linear</option>
+          <option>Exponential</option>
+        </select>
+      </div>
+      <div class="prop-section">Environment</div>
+      <div class="prop-row">
+        <span class="prop-label">Texture</span>
+        <select class="prop-select"><option>None</option></select>
+      </div>
+    </div>
+
+    <!-- PROJECT panel -->
+    <div class="rp-panel" id="rp-project">
+      <div class="prop-section">Renderer</div>
+      <div class="prop-row">
+        <span class="prop-label">Renderer</span>
+        <select class="prop-select"><option>WebGL</option><option>WebGPU</option></select>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Antialias</span>
+        <input type="checkbox" class="prop-checkbox" checked>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Shadows</span>
+        <input type="checkbox" class="prop-checkbox" checked>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Shadow type</span>
+        <select class="prop-select"><option>PCF</option><option>PCFSoft</option><option>VSM</option></select>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Tonemapping</span>
+        <select class="prop-select" onchange="setToneMapping(this.value)">
+          <option value="0">None</option>
+          <option value="1">Linear</option>
+          <option value="2" selected>Reinhard</option>
+          <option value="3">Cineon</option>
+          <option value="4">ACES</option>
+        </select>
+      </div>
+      <div class="prop-section">APP</div>
+      <div class="prop-row">
+        <span class="prop-label">Title</span>
+        <input type="text" value="" class="prop-value" placeholder="Scene title">
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Editable</span>
+        <input type="checkbox" class="prop-checkbox">
+      </div>
+      <div style="height:6px"></div>
+      <button class="prop-btn" onclick="openInBrowser()">🌐 OPEN IN BROWSER</button>
+      <button class="prop-btn">PUBLISH</button>
+    </div>
+
+    <!-- SETTINGS panel -->
+    <div class="rp-panel" id="rp-settings">
+      <div class="prop-section">Language</div>
+      <div class="prop-row">
+        <span class="prop-label">Language</span>
+        <select class="prop-select"><option>English</option><option>Arabic</option></select>
+      </div>
+      <div class="prop-section">Display</div>
+      <div class="prop-row">
+        <span class="prop-label">Grid size</span>
+        <input type="number" value="30" class="prop-value">
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Grid Div.</span>
+        <input type="number" value="30" class="prop-value">
+      </div>
+      <div class="prop-section">Controls</div>
+      <div class="prop-row" style="font-size:10px;color:#666;line-height:1.6">
+        Left drag: Orbit<br>
+        Right drag: Pan<br>
+        Scroll: Zoom
+      </div>
+    </div>
+
+    <!-- Bottom section: GEOMETRIES / MATERIALS / TEXTURES -->
+    <div id="rp-bottom">
+      <div class="rp-btabs">
+        <div class="rp-btab active" onclick="switchBTab('geometries', this)">GEOMETRIES</div>
+        <div class="rp-btab" onclick="switchBTab('materials', this)">MATERIALS</div>
+        <div class="rp-btab" onclick="switchBTab('textures', this)">TEXTURES</div>
+      </div>
+      <div class="rp-bcontent" id="btab-geometries"></div>
+      <div class="rp-bcontent" id="btab-materials" style="display:none"></div>
+      <div class="rp-bcontent" id="btab-textures" style="display:none"></div>
+      <button class="rp-assign-btn">ASSIGN</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Bottom Playback Bar ── -->
+<div id="bottombar">
+  <button class="play-btn" id="btn-play" onclick="togglePlay()" title="Play">▶</button>
+  <button class="play-btn" onclick="stopAnim()" title="Stop">■</button>
+  <button class="play-btn" onclick="stepFrame()" title="Step Frame">⏭</button>
+  <span id="anim-time">0.00 / 0.00</span>
+</div>
+
+<!-- ── Three.js Import Map ── -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader }   from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+/* ── State ── */
+let scene, camera, renderer, controls, mixer;
+let clock = new THREE.Clock();
+let loadedModel = null;
+let wireframeMode = false;
+let gridVisible = true;
+let animPlaying = false;
+let animDuration = 0;
+let animTime    = 0;
+let revisionNum = 1;
+let renderMode  = 'solid';
+let originalMaterials = new Map();
+
+const vp = document.getElementById('viewport');
+
+/* ── Scene ── */
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+/* ── Camera ── */
+camera = new THREE.PerspectiveCamera(50, vp.clientWidth / vp.clientHeight, 0.1, 10000);
+camera.position.set(150, 120, 200);
+
+/* ── Renderer ── */
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(vp.clientWidth, vp.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+vp.appendChild(renderer.domElement);
+
+/* ── Controls ── */
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+/* ── Grid ── */
+const grid = new THREE.GridHelper(300, 30, 0x444444, 0x333333);
+scene.add(grid);
+
+/* ── Lighting ── */
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+const dirA = new THREE.DirectionalLight(0xffffff, 1.2);
+dirA.position.set(100, 200, 100);
+dirA.castShadow = true;
+dirA.shadow.mapSize.set(2048, 2048);
+dirA.shadow.camera.left  = -300;
+dirA.shadow.camera.right =  300;
+dirA.shadow.camera.top   =  300;
+dirA.shadow.camera.bottom= -300;
+dirA.shadow.camera.far   =  1000;
+dirA.shadow.bias = -0.0005;
+scene.add(dirA);
+
+const dirB = new THREE.DirectionalLight(0xfff0e0, 0.35);
+dirB.position.set(-80, 100, -60);
+scene.add(dirB);
+
+/* ── Load Model ── */
+document.getElementById('load-sub').textContent = 'Decoding model…';
+
+const b64 = "Z2xURgIAAABsSAAA0AQAAEpTT057ImFjY2Vzc29ycyI6W3siYnVmZmVyVmlldyI6MCwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjcyLCJtYXgiOls1OC44ODUyNzI5Nzk3MzYzMyw3LjIxODY1NTQ4NjA1OTRlLTE4LDUyLjc0NDg1Nzc4ODA4NTk0XSwibWluIjpbLTU5LjY5MDMxMTQzMTg4NDc2NiwtOC4zOTk5OTk2MTg1MzAyNzMsLTUyLjc0Nzk1NTMyMjI2NTYyNV0sInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3IjoxLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MTM2OCwibWF4IjpbNTguODg1MjcyOTc5NzM2MzMsLTguMzk5OTk5NjE4NTMwMjczLDUyLjc0NDg1Nzc4ODA4NTk0XSwibWluIjpbLTU5LjY5MDMxMTQzMTg4NDc2NiwtMTUyLjgwMDAwMzA1MTc1NzgsLTUyLjc0Nzk1NTMyMjI2NTYyNV0sInR5cGUiOiJWRUMzIn1dLCJhc3NldCI6eyJ2ZXJzaW9uIjoiMi4wIn0sImJ1ZmZlclZpZXdzIjpbeyJidWZmZXIiOjAsImJ5dGVMZW5ndGgiOjg2NCwidGFyZ2V0IjozNDk2Mn0seyJidWZmZXIiOjAsImJ5dGVMZW5ndGgiOjE2NDE2LCJieXRlT2Zmc2V0Ijo4NjQsInRhcmdldCI6MzQ5NjJ9XSwiYnVmZmVycyI6W3siYnl0ZUxlbmd0aCI6MTcyODB9XSwibWF0ZXJpYWxzIjpbeyJkb3VibGVTaWRlZCI6dHJ1ZSwibmFtZSI6IkNpdHlFbmdpbmVNYXRlcmlhbCIsInBick1ldGFsbGljUm91Z2huZXNzIjp7ImJhc2VDb2xvckZhY3RvciI6WzAuMjE5NTE5NzE5NDgxNDY4MiwwLjQ3MDQ0MDIzODcxNDIxODE0LDEuMCwxLjBdLCJtZXRhbGxpY0ZhY3RvciI6MC4wfX0seyJkb3VibGVTaWRlZCI6dHJ1ZSwibmFtZSI6IkNpdHlFbmdpbmVNYXRlcmlhbF8xIiwicGJyTWV0YWxsaWNSb3VnaG5lc3MiOnsiYmFzZUNvbG9yRmFjdG9yIjpbMC40NDIzMjI5Mzk2MzQzMjMxLDAuNjczMDQ5MDkyMjkyNzg1NiwxLjAsMS4wXSwibWV0YWxsaWNGYWN0b3IiOjAuMH19XSwibWVzaGVzIjpbeyJuYW1lIjoibWVzaF9DaXR5RW5naW5lTWF0ZXJpYWwiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjowfSwibWF0ZXJpYWwiOjB9XX0seyJuYW1lIjoibWVzaF9DaXR5RW5naW5lTWF0ZXJpYWxfMSIsInByaW1pdGl2ZXMiOlt7ImF0dHJpYnV0ZXMiOnsiUE9TSVRJT04iOjF9LCJtYXRlcmlhbCI6MX1dfV0sIm5vZGVzIjpbeyJjaGlsZHJlbiI6WzFdfSx7Im1lc2giOjB9LHsiY2hpbGRyZW4iOlszXX0seyJtZXNoIjoxfV0sInNjZW5lIjowLCJzY2VuZXMiOlt7Im5vZGVzIjpbMCwyXX1dfSAgIIBDAABCSU4A4cJuwnRba6Kr42lAgfa+wSMpBSO8+lJChYprQlhcIyLqsGnA4cJuwnRba6Kr42lAhYprQlhcIyLqsGnAOWfFQdv0MyLo/VLCgfa+wTMzk8C8+lJC4cJuwjMzk8Cr42lAOWfFQTMzk8Do/VLCgfa+wTMzk8C8+lJCOWfFQTMzk8Do/VLChYprQjMzk8DqsGnAgfa+wSMpBSO8+lJC4cJuwnRba6Kr42lA4cJuwjMzk8Cr42lAgfa+wSMpBSO8+lJC4cJuwjMzk8Cr42lAgfa+wTMzk8C8+lJC4cJuwnRba6Kr42lAOWfFQdv0MyLo/VLCOWfFQTMzk8Do/VLC4cJuwnRba6Kr42lAOWfFQTMzk8Do/VLC4cJuwjMzk8Cr42lAOWfFQdv0MyLo/VLChYprQlhcIyLqsGnAhYprQjMzk8DqsGnAOWfFQdv0MyLo/VLChYprQjMzk8DqsGnAOWfFQTMzk8Do/VLChYprQlhcIyLqsGnAgfa+wSMpBSO8+lJCgfa+wTMzk8C8+lJChYprQlhcIyLqsGnAgfa+wTMzk8C8+lJChYprQjMzk8DqsGnA4cJuwjMzk8Cr42lAgfa+wTMzk8C8+lJChYprQjMzk8DqsGnA4cJuwjMzk8Cr42lAhYprQjMzk8DqsGnAOWfFQTMzk8Do/VLCgfa+wWZmBsG8+lJC4cJuwmZmBsGr42lAOWfFQWZmBsHo/VLCgfa+wWZmBsG8+lJCOWfFQWZmBsHo/VLChYprQmZmBsHqsGnAgfa+wTMzk8C8+lJC4cJuwjMzk8Cr42lA4cJuwmZmBsGr42lAgfa+wTMzk8C8+lJC4cJuwmZmBsGr42lAgfa+wWZmBsG8+lJC4cJuwjMzk8Cr42lAOWfFQTMzk8Do/VLCOWfFQWZmBsHo/VLC4cJuwjMzk8Cr42lAOWfFQWZmBsHo/VLC4cJuwmZmBsGr42lAOWfFQTMzk8Do/VLChYprQjMzk8DqsGnAhYprQmZmBsHqsGnAOWfFQTMzk8Do/VLChYprQmZmBsHqsGnAOWfFQWZmBsHo/VLChYprQjMzk8DqsGnAgfa+wTMzk8C8+lJCgfa+wWZmBsG8+lJChYprQjMzk8DqsGnAgfa+wWZmBsG8+lJChYprQmZmBsHqsGnA4cJuwmZmBsGr42lAgfa+wWZmBsG8+lJChYprQmZmBsHqsGnA4cJuwmZmBsGr42lAhYprQmZmBsHqsGnAOWfFQWZmBsHo/VLCgfa+wTMzQ8G8+lJC4cJuwjMzQ8Gr42lAOWfFQTMzQ8Ho/VLCgfa+wTMzQ8G8+lJCOWfFQTMzQ8Ho/VLChYprQjMzQ8HqsGnAgfa+wWZmBsG8+lJC4cJuwmZmBsGr42lA4cJuwjMzQ8Gr42lAgfa+wWZmBsG8+lJC4cJuwjMzQ8Gr42lAgfa+wTMzQ8G8+lJC4cJuwmZmBsGr42lAOWfFQWZmBsHo/VLCOWfFQTMzQ8Ho/VLC4cJuwmZmBsGr42lAOWfFQTMzQ8Ho/VLC4cJuwjMzQ8Gr42lAOWfFQWZmBsHo/VLChYprQmZmBsHqsGnAhYprQjMzQ8HqsGnAOWfFQWZmBsHo/VLChYprQjMzQ8HqsGnAOWfFQTMzQ8Ho/VLChYprQmZmBsHqsGnAgfa+wWZmBsG8+lJCgfa+wTMzQ8G8+lJChYprQmZmBsHqsGnAgfa+wTMzQ8G8+lJChYprQjMzQ8HqsGnA4cJuwjMzQ8Gr42lAgfa+wTMzQ8G8+lJChYprQjMzQ8HqsGnA4cJuwjMzQ8Gr42lAhYprQjMzQ8HqsGnAOWfFQTMzQ8Ho/VLCgfa+wQAAgMG8+lJC4cJuwgAAgMGr42lAOWfFQQAAgMHo/VLCgfa+wQAAgMG8+lJCOWfFQQAAgMHo/VLChYprQgAAgMHqsGnAgfa+wTMzQ8G8+lJC4cJuwjMzQ8Gr42lA4cJuwgAAgMGr42lAgfa+wTMzQ8G8+lJC4cJuwgAAgMGr42lAgfa+wQAAgMG8+lJC4cJuwjMzQ8Gr42lAOWfFQTMzQ8Ho/VLCOWfFQQAAgMHo/VLC4cJuwjMzQ8Gr42lAOWfFQQAAgMHo/VLC4cJuwgAAgMGr42lAOWfFQTMzQ8Ho/VLChYprQjMzQ8HqsGnAhYprQgAAgMHqsGnAOWfFQTMzQ8Ho/VLChYprQgAAgMHqsGnAOWfFQQAAgMHo/VLChYprQjMzQ8HqsGnAgfa+wTMzQ8G8+lJCgfa+wQAAgMG8+lJChYprQjMzQ8HqsGnAgfa+wQAAgMG8+lJChYprQgAAgMHqsGnA4cJuwgAAgMGr42lAgfa+wQAAgMG8+lJChYprQgAAgMHqsGnA4cJuwgAAgMGr42lAhYprQgAAgMHqsGnAOWfFQQAAgMHo/VLCgfa+wWZmnsG8+lJC4cJuwmZmnsGr42lAOWfFQWZmnsHo/VLCgfa+wWZmnsG8+lJCOWfFQWZmnsHo/VLChYprQmZmnsHqsGnAgfa+wQAAgMG8+lJC4cJuwgAAgMGr42lA4cJuwmZmnsGr42lAgfa+wQAAgMG8+lJC4cJuwmZmnsGr42lAgfa+wWZmnsG8+lJC4cJuwgAAgMGr42lAOWfFQQAAgMHo/VLCOWfFQWZmnsHo/VLC4cJuwgAAgMGr42lAOWfFQWZmnsHo/VLC4cJuwmZmnsGr42lAOWfFQQAAgMHo/VLChYprQgAAgMHqsGnAhYprQmZmnsHqsGnAOWfFQQAAgMHo/VLChYprQmZmnsHqsGnAOWfFQWZmnsHo/VLChYprQgAAgMHqsGnAgfa+wQAAgMG8+lJCgfa+wWZmnsG8+lJChYprQgAAgMHqsGnAgfa+wWZmnsG8+lJChYprQmZmnsHqsGnA4cJuwmZmnsGr42lAgfa+wWZmnsG8+lJChYprQmZmnsHqsGnA4cJuwmZmnsGr42lAhYprQmZmnsHqsGnAOWfFQWZmnsHo/VLCgfa+wc3MvMG8+lJC4cJuws3MvMGr42lAOWfFQc3MvMHo/VLCgfa+wc3MvMG8+lJCOWfFQc3MvMHo/VLChYprQs3MvMHqsGnAgfa+wWZmnsG8+lJC4cJuwmZmnsGr42lA4cJuws3MvMGr42lAgfa+wWZmnsG8+lJC4cJuws3MvMGr42lAgfa+wc3MvMG8+lJC4cJuwmZmnsGr42lAOWfFQWZmnsHo/VLCOWfFQc3MvMHo/VLC4cJuwmZmnsGr42lAOWfFQc3MvMHo/VLC4cJuws3MvMGr42lAOWfFQWZmnsHo/VLChYprQmZmnsHqsGnAhYprQs3MvMHqsGnAOWfFQWZmnsHo/VLChYprQs3MvMHqsGnAOWfFQc3MvMHo/VLChYprQmZmnsHqsGnAgfa+wWZmnsG8+lJCgfa+wc3MvMG8+lJChYprQmZmnsHqsGnAgfa+wc3MvMG8+lJChYprQs3MvMHqsGnA4cJuws3MvMGr42lAgfa+wc3MvMG8+lJChYprQs3MvMHqsGnA4cJuws3MvMGr42lAhYprQs3MvMHqsGnAOWfFQc3MvMHo/VLCgfa+wTMz28G8+lJC4cJuwjMz28Gr42lAOWfFQTMz28Ho/VLCgfa+wTMz28G8+lJCOWfFQTMz28Ho/VLChYprQjMz28HqsGnAgfa+wc3MvMG8+lJC4cJuws3MvMGr42lA4cJuwjMz28Gr42lAgfa+wc3MvMG8+lJC4cJuwjMz28Gr42lAgfa+wTMz28G8+lJC4cJuws3MvMGr42lAOWfFQc3MvMHo/VLCOWfFQTMz28Ho/VLC4cJuws3MvMGr42lAOWfFQTMz28Ho/VLC4cJuwjMz28Gr42lAOWfFQc3MvMHo/VLChYprQs3MvMHqsGnAhYprQjMz28HqsGnAOWfFQc3MvMHo/VLChYprQjMz28HqsGnAOWfFQTMz28Ho/VLChYprQs3MvMHqsGnAgfa+wc3MvMG8+lJCgfa+wTMz28G8+lJChYprQs3MvMHqsGnAgfa+wTMz28G8+lJChYprQjMz28HqsGnA4cJuwjMz28Gr42lAgfa+wTMz28G8+lJChYprQjMz28HqsGnA4cJuwjMz28Gr42lAhYprQjMz28HqsGnAOWfFQTMz28Ho/VLCgfa+wZqZ+cG8+lJC4cJuwpqZ+cGr42lAOWfFQZqZ+cHo/VLCgfa+wZqZ+cG8+lJCOWfFQZqZ+cHo/VLChYprQpqZ+cHqsGnAgfa+wTMz28G8+lJC4cJuwjMz28Gr42lA4cJuwpqZ+cGr42lAgfa+wTMz28G8+lJC4cJuwpqZ+cGr42lAgfa+wZqZ+cG8+lJC4cJuwjMz28Gr42lAOWfFQTMz28Ho/VLCOWfFQZqZ+cHo/VLC4cJuwjMz28Gr42lAOWfFQZqZ+cHo/VLC4cJuwpqZ+cGr42lAOWfFQTMz28Ho/VLChYprQjMz28HqsGnAhYprQpqZ+cHqsGnAOWfFQTMz28Ho/VLChYprQpqZ+cHqsGnAOWfFQZqZ+cHo/VLChYprQjMz28HqsGnAgfa+wTMz28G8+lJCgfa+wZqZ+cG8+lJChYprQjMz28HqsGnAgfa+wZqZ+cG8+lJChYprQpqZ+cHqsGnA4cJuwpqZ+cGr42lAgfa+wZqZ+cG8+lJChYprQpqZ+cHqsGnA4cJuwpqZ+cGr42lAhYprQpqZ+cHqsGnAOWfFQZqZ+cHo/VLCgfa+wQAADMK8+lJC4cJuwgAADMKr42lAOWfFQQAADMLo/VLCgfa+wQAADMK8+lJCOWfFQQAADMLo/VLChYprQgAADMLqsGnAgfa+wZqZ+cG8+lJC4cJuwpqZ+cGr42lA4cJuwgAADMKr42lAgfa+wZqZ+cG8+lJC4cJuwgAADMKr42lAgfa+wQAADMK8+lJC4cJuwpqZ+cGr42lAOWfFQZqZ+cHo/VLCOWfFQQAADMLo/VLC4cJuwpqZ+cGr42lAOWfFQQAADMLo/VLC4cJuwgAADMKr42lAOWfFQZqZ+cHo/VLChYprQpqZ+cHqsGnAhYprQgAADMLqsGnAOWfFQZqZ+cHo/VLChYprQgAADMLqsGnAOWfFQQAADMLo/VLChYprQpqZ+cHqsGnAgfa+wZqZ+cG8+lJCgfa+wQAADMK8+lJChYprQpqZ+cHqsGnAgfa+wQAADMK8+lJChYprQgAADMLqsGnA4cJuwgAADMKr42lAgfa+wQAADMK8+lJChYprQgAADMLqsGnA4cJuwgAADMKr42lAhYprQgAADMLqsGnAOWfFQQAADMLo/VLCgfa+wTMzG8K8+lJC4cJuwjMzG8Kr42lAOWfFQTMzG8Lo/VLCgfa+wTMzG8K8+lJCOWfFQTMzG8Lo/VLChYprQjMzG8LqsGnAgfa+wQAADMK8+lJC4cJuwgAADMKr42lA4cJuwjMzG8Kr42lAgfa+wQAADMK8+lJC4cJuwjMzG8Kr42lAgfa+wTMzG8K8+lJC4cJuwgAADMKr42lAOWfFQQAADMLo/VLCOWfFQTMzG8Lo/VLC4cJuwgAADMKr42lAOWfFQTMzG8Lo/VLC4cJuwjMzG8Kr42lAOWfFQQAADMLo/VLChYprQgAADMLqsGnAhYprQjMzG8LqsGnAOWfFQQAADMLo/VLChYprQjMzG8LqsGnAOWfFQTMzG8Lo/VLChYprQgAADMLqsGnAgfa+wQAADMK8+lJCgfa+wTMzG8K8+lJChYprQgAADMLqsGnAgfa+wTMzG8K8+lJChYprQjMzG8LqsGnA4cJuwjMzG8Kr42lAgfa+wTMzG8K8+lJChYprQjMzG8LqsGnA4cJuwjMzG8Kr42lAhYprQjMzG8LqsGnAOWfFQTMzG8Lo/VLCgfa+wWZmKsK8+lJC4cJuwmZmKsKr42lAOWfFQWZmKsLo/VLCgfa+wWZmKsK8+lJCOWfFQWZmKsLo/VLChYprQmZmKsLqsGnAgfa+wTMzG8K8+lJC4cJuwjMzG8Kr42lA4cJuwmZmKsKr42lAgfa+wTMzG8K8+lJC4cJuwmZmKsKr42lAgfa+wWZmKsK8+lJC4cJuwjMzG8Kr42lAOWfFQTMzG8Lo/VLCOWfFQWZmKsLo/VLC4cJuwjMzG8Kr42lAOWfFQWZmKsLo/VLC4cJuwmZmKsKr42lAOWfFQTMzG8Lo/VLChYprQjMzG8LqsGnAhYprQmZmKsLqsGnAOWfFQTMzG8Lo/VLChYprQmZmKsLqsGnAOWfFQWZmKsLo/VLChYprQjMzG8LqsGnAgfa+wTMzG8K8+lJCgfa+wWZmKsK8+lJChYprQjMzG8LqsGnAgfa+wWZmKsK8+lJChYprQmZmKsLqsGnA4cJuwmZmKsKr42lAgfa+wWZmKsK8+lJChYprQmZmKsLqsGnA4cJuwmZmKsKr42lAhYprQmZmKsLqsGnAOWfFQWZmKsLo/VLCgfa+wZqZOcK8+lJC4cJuwpqZOcKr42lAOWfFQZqZOcLo/VLCgfa+wZqZOcK8+lJCOWfFQZqZOcLo/VLChYprQpqZOcLqsGnAgfa+wWZmKsK8+lJC4cJuwmZmKsKr42lA4cJuwpqZOcKr42lAgfa+wWZmKsK8+lJC4cJuwpqZOcKr42lAgfa+wZqZOcK8+lJC4cJuwmZmKsKr42lAOWfFQWZmKsLo/VLCOWfFQZqZOcLo/VLC4cJuwmZmKsKr42lAOWfFQZqZOcLo/VLC4cJuwpqZOcKr42lAOWfFQWZmKsLo/VLChYprQmZmKsLqsGnAhYprQpqZOcLqsGnAOWfFQWZmKsLo/VLChYprQpqZOcLqsGnAOWfFQZqZOcLo/VLChYprQmZmKsLqsGnAgfa+wWZmKsK8+lJCgfa+wZqZOcK8+lJChYprQmZmKsLqsGnAgfa+wZqZOcK8+lJChYprQpqZOcLqsGnA4cJuwpqZOcKr42lAgfa+wZqZOcK8+lJChYprQpqZOcLqsGnA4cJuwpqZOcKr42lAhYprQpqZOcLqsGnAOWfFQZqZOcLo/VLCgfa+wc3MSMK8+lJC4cJuws3MSMKr42lAOWfFQc3MSMLo/VLCgfa+wc3MSMK8+lJCOWfFQc3MSMLo/VLChYprQs3MSMLqsGnAgfa+wZqZOcK8+lJC4cJuwpqZOcKr42lA4cJuws3MSMKr42lAgfa+wZqZOcK8+lJC4cJuws3MSMKr42lAgfa+wc3MSMK8+lJC4cJuwpqZOcKr42lAOWfFQZqZOcLo/VLCOWfFQc3MSMLo/VLC4cJuwpqZOcKr42lAOWfFQc3MSMLo/VLC4cJuws3MSMKr42lAOWfFQZqZOcLo/VLChYprQpqZOcLqsGnAhYprQs3MSMLqsGnAOWfFQZqZOcLo/VLChYprQs3MSMLqsGnAOWfFQc3MSMLo/VLChYprQpqZOcLqsGnAgfa+wZqZOcK8+lJCgfa+wc3MSMK8+lJChYprQpqZOcLqsGnAgfa+wc3MSMK8+lJChYprQs3MSMLqsGnA4cJuws3MSMKr42lAgfa+wc3MSMK8+lJChYprQs3MSMLqsGnA4cJuws3MSMKr42lAhYprQs3MSMLqsGnAOWfFQc3MSMLo/VLCgfa+wQAAWMK8+lJC4cJuwgAAWMKr42lAOWfFQQAAWMLo/VLCgfa+wQAAWMK8+lJCOWfFQQAAWMLo/VLChYprQgAAWMLqsGnAgfa+wc3MSMK8+lJC4cJuws3MSMKr42lA4cJuwgAAWMKr42lAgfa+wc3MSMK8+lJC4cJuwgAAWMKr42lAgfa+wQAAWMK8+lJC4cJuws3MSMKr42lAOWfFQc3MSMLo/VLCOWfFQQAAWMLo/VLC4cJuws3MSMKr42lAOWfFQQAAWMLo/VLC4cJuwgAAWMKr42lAOWfFQc3MSMLo/VLChYprQs3MSMLqsGnAhYprQgAAWMLqsGnAOWfFQc3MSMLo/VLChYprQgAAWMLqsGnAOWfFQQAAWMLo/VLChYprQs3MSMLqsGnAgfa+wc3MSMK8+lJCgfa+wQAAWMK8+lJChYprQs3MSMLqsGnAgfa+wQAAWMK8+lJChYprQgAAWMLqsGnA4cJuwgAAWMKr42lAgfa+wQAAWMK8+lJChYprQgAAWMLqsGnA4cJuwgAAWMKr42lAhYprQgAAWMLqsGnAOWfFQQAAWMLo/VLCgfa+wTMzZ8K8+lJC4cJuwjMzZ8Kr42lAOWfFQTMzZ8Lo/VLCgfa+wTMzZ8K8+lJCOWfFQTMzZ8Lo/VLChYprQjMzZ8LqsGnAgfa+wQAAWMK8+lJC4cJuwgAAWMKr42lA4cJuwjMzZ8Kr42lAgfa+wQAAWMK8+lJC4cJuwjMzZ8Kr42lAgfa+wTMzZ8K8+lJC4cJuwgAAWMKr42lAOWfFQQAAWMLo/VLCOWfFQTMzZ8Lo/VLC4cJuwgAAWMKr42lAOWfFQTMzZ8Lo/VLC4cJuwjMzZ8Kr42lAOWfFQQAAWMLo/VLChYprQgAAWMLqsGnAhYprQjMzZ8LqsGnAOWfFQQAAWMLo/VLChYprQjMzZ8LqsGnAOWfFQTMzZ8Lo/VLChYprQgAAWMLqsGnAgfa+wQAAWMK8+lJCgfa+wTMzZ8K8+lJChYprQgAAWMLqsGnAgfa+wTMzZ8K8+lJChYprQjMzZ8LqsGnA4cJuwjMzZ8Kr42lAgfa+wTMzZ8K8+lJChYprQjMzZ8LqsGnA4cJuwjMzZ8Kr42lAhYprQjMzZ8LqsGnAOWfFQTMzZ8Lo/VLCgfa+wWZmdsK8+lJC4cJuwmZmdsKr42lAOWfFQWZmdsLo/VLCgfa+wWZmdsK8+lJCOWfFQWZmdsLo/VLChYprQmZmdsLqsGnAgfa+wTMzZ8K8+lJC4cJuwjMzZ8Kr42lA4cJuwmZmdsKr42lAgfa+wTMzZ8K8+lJC4cJuwmZmdsKr42lAgfa+wWZmdsK8+lJC4cJuwjMzZ8Kr42lAOWfFQTMzZ8Lo/VLCOWfFQWZmdsLo/VLC4cJuwjMzZ8Kr42lAOWfFQWZmdsLo/VLC4cJuwmZmdsKr42lAOWfFQTMzZ8Lo/VLChYprQjMzZ8LqsGnAhYprQmZmdsLqsGnAOWfFQTMzZ8Lo/VLChYprQmZmdsLqsGnAOWfFQWZmdsLo/VLChYprQjMzZ8LqsGnAgfa+wTMzZ8K8+lJCgfa+wWZmdsK8+lJChYprQjMzZ8LqsGnAgfa+wWZmdsK8+lJChYprQmZmdsLqsGnA4cJuwmZmdsKr42lAgfa+wWZmdsK8+lJChYprQmZmdsLqsGnA4cJuwmZmdsKr42lAhYprQmZmdsLqsGnAOWfFQWZmdsLo/VLCgfa+wc3MgsK8+lJC4cJuws3MgsKr42lAOWfFQc3MgsLo/VLCgfa+wc3MgsK8+lJCOWfFQc3MgsLo/VLChYprQs3MgsLqsGnAgfa+wWZmdsK8+lJC4cJuwmZmdsKr42lA4cJuws3MgsKr42lAgfa+wWZmdsK8+lJC4cJuws3MgsKr42lAgfa+wc3MgsK8+lJC4cJuwmZmdsKr42lAOWfFQWZmdsLo/VLCOWfFQc3MgsLo/VLC4cJuwmZmdsKr42lAOWfFQc3MgsLo/VLC4cJuws3MgsKr42lAOWfFQWZmdsLo/VLChYprQmZmdsLqsGnAhYprQs3MgsLqsGnAOWfFQWZmdsLo/VLChYprQs3MgsLqsGnAOWfFQc3MgsLo/VLChYprQmZmdsLqsGnAgfa+wWZmdsK8+lJCgfa+wc3MgsK8+lJChYprQmZmdsLqsGnAgfa+wc3MgsK8+lJChYprQs3MgsLqsGnA4cJuws3MgsKr42lAgfa+wc3MgsK8+lJChYprQs3MgsLqsGnA4cJuws3MgsKr42lAhYprQs3MgsLqsGnAOWfFQc3MgsLo/VLCgfa+wWZmisK8+lJC4cJuwmZmisKr42lAOWfFQWZmisLo/VLCgfa+wWZmisK8+lJCOWfFQWZmisLo/VLChYprQmZmisLqsGnAgfa+wc3MgsK8+lJC4cJuws3MgsKr42lA4cJuwmZmisKr42lAgfa+wc3MgsK8+lJC4cJuwmZmisKr42lAgfa+wWZmisK8+lJC4cJuws3MgsKr42lAOWfFQc3MgsLo/VLCOWfFQWZmisLo/VLC4cJuws3MgsKr42lAOWfFQWZmisLo/VLC4cJuwmZmisKr42lAOWfFQc3MgsLo/VLChYprQs3MgsLqsGnAhYprQmZmisLqsGnAOWfFQc3MgsLo/VLChYprQmZmisLqsGnAOWfFQWZmisLo/VLChYprQs3MgsLqsGnAgfa+wc3MgsK8+lJCgfa+wWZmisK8+lJChYprQs3MgsLqsGnAgfa+wWZmisK8+lJChYprQmZmisLqsGnA4cJuwmZmisKr42lAgfa+wWZmisK8+lJChYprQmZmisLqsGnA4cJuwmZmisKr42lAhYprQmZmisLqsGnAOWfFQWZmisLo/VLCgfa+wQAAksK8+lJC4cJuwgAAksKr42lAOWfFQQAAksLo/VLCgfa+wQAAksK8+lJCOWfFQQAAksLo/VLChYprQgAAksLqsGnAgfa+wWZmisK8+lJC4cJuwmZmisKr42lA4cJuwgAAksKr42lAgfa+wWZmisK8+lJC4cJuwgAAksKr42lAgfa+wQAAksK8+lJC4cJuwmZmisKr42lAOWfFQWZmisLo/VLCOWfFQQAAksLo/VLC4cJuwmZmisKr42lAOWfFQQAAksLo/VLC4cJuwgAAksKr42lAOWfFQWZmisLo/VLChYprQmZmisLqsGnAhYprQgAAksLqsGnAOWfFQWZmisLo/VLChYprQgAAksLqsGnAOWfFQQAAksLo/VLChYprQmZmisLqsGnAgfa+wWZmisK8+lJCgfa+wQAAksK8+lJChYprQmZmisLqsGnAgfa+wQAAksK8+lJChYprQgAAksLqsGnA4cJuwgAAksKr42lAgfa+wQAAksK8+lJChYprQgAAksLqsGnA4cJuwgAAksKr42lAhYprQgAAksLqsGnAOWfFQQAAksLo/VLCgfa+wZqZmcK8+lJC4cJuwpqZmcKr42lAOWfFQZqZmcLo/VLCgfa+wZqZmcK8+lJCOWfFQZqZmcLo/VLChYprQpqZmcLqsGnAgfa+wQAAksK8+lJC4cJuwgAAksKr42lA4cJuwpqZmcKr42lAgfa+wQAAksK8+lJC4cJuwpqZmcKr42lAgfa+wZqZmcK8+lJC4cJuwgAAksKr42lAOWfFQQAAksLo/VLCOWfFQZqZmcLo/VLC4cJuwgAAksKr42lAOWfFQZqZmcLo/VLC4cJuwpqZmcKr42lAOWfFQQAAksLo/VLChYprQgAAksLqsGnAhYprQpqZmcLqsGnAOWfFQQAAksLo/VLChYprQpqZmcLqsGnAOWfFQZqZmcLo/VLChYprQgAAksLqsGnAgfa+wQAAksK8+lJCgfa+wZqZmcK8+lJChYprQgAAksLqsGnAgfa+wZqZmcK8+lJChYprQpqZmcLqsGnA4cJuwpqZmcKr42lAgfa+wZqZmcK8+lJChYprQpqZmcLqsGnA4cJuwpqZmcKr42lAhYprQpqZmcLqsGnAOWfFQZqZmcLo/VLCgfa+wTMzocK8+lJC4cJuwjMzocKr42lAOWfFQTMzocLo/VLCgfa+wTMzocK8+lJCOWfFQTMzocLo/VLChYprQjMzocLqsGnAgfa+wZqZmcK8+lJC4cJuwpqZmcKr42lA4cJuwjMzocKr42lAgfa+wZqZmcK8+lJC4cJuwjMzocKr42lAgfa+wTMzocK8+lJC4cJuwpqZmcKr42lAOWfFQZqZmcLo/VLCOWfFQTMzocLo/VLC4cJuwpqZmcKr42lAOWfFQTMzocLo/VLC4cJuwjMzocKr42lAOWfFQZqZmcLo/VLChYprQpqZmcLqsGnAhYprQjMzocLqsGnAOWfFQZqZmcLo/VLChYprQjMzocLqsGnAOWfFQTMzocLo/VLChYprQpqZmcLqsGnAgfa+wZqZmcK8+lJCgfa+wTMzocK8+lJChYprQpqZmcLqsGnAgfa+wTMzocK8+lJChYprQjMzocLqsGnA4cJuwjMzocKr42lAgfa+wTMzocK8+lJChYprQjMzocLqsGnA4cJuwjMzocKr42lAhYprQjMzocLqsGnAOWfFQTMzocLo/VLCgfa+wc3MqMK8+lJC4cJuws3MqMKr42lAOWfFQc3MqMLo/VLCgfa+wc3MqMK8+lJCOWfFQc3MqMLo/VLChYprQs3MqMLqsGnAgfa+wTMzocK8+lJC4cJuwjMzocKr42lA4cJuws3MqMKr42lAgfa+wTMzocK8+lJC4cJuws3MqMKr42lAgfa+wc3MqMK8+lJC4cJuwjMzocKr42lAOWfFQTMzocLo/VLCOWfFQc3MqMLo/VLC4cJuwjMzocKr42lAOWfFQc3MqMLo/VLC4cJuws3MqMKr42lAOWfFQTMzocLo/VLChYprQjMzocLqsGnAhYprQs3MqMLqsGnAOWfFQTMzocLo/VLChYprQs3MqMLqsGnAOWfFQc3MqMLo/VLChYprQjMzocLqsGnAgfa+wTMzocK8+lJCgfa+wc3MqMK8+lJChYprQjMzocLqsGnAgfa+wc3MqMK8+lJChYprQs3MqMLqsGnA4cJuws3MqMKr42lAgfa+wc3MqMK8+lJChYprQs3MqMLqsGnA4cJuws3MqMKr42lAhYprQs3MqMLqsGnAOWfFQc3MqMLo/VLCgfa+wWZmsMK8+lJC4cJuwmZmsMKr42lAOWfFQWZmsMLo/VLCgfa+wWZmsMK8+lJCOWfFQWZmsMLo/VLChYprQmZmsMLqsGnAgfa+wc3MqMK8+lJC4cJuws3MqMKr42lA4cJuwmZmsMKr42lAgfa+wc3MqMK8+lJC4cJuwmZmsMKr42lAgfa+wWZmsMK8+lJC4cJuws3MqMKr42lAOWfFQc3MqMLo/VLCOWfFQWZmsMLo/VLC4cJuws3MqMKr42lAOWfFQWZmsMLo/VLC4cJuwmZmsMKr42lAOWfFQc3MqMLo/VLChYprQs3MqMLqsGnAhYprQmZmsMLqsGnAOWfFQc3MqMLo/VLChYprQmZmsMLqsGnAOWfFQWZmsMLo/VLChYprQs3MqMLqsGnAgfa+wc3MqMK8+lJCgfa+wWZmsMK8+lJChYprQs3MqMLqsGnAgfa+wWZmsMK8+lJChYprQmZmsMLqsGnA4cJuwmZmsMKr42lAgfa+wWZmsMK8+lJChYprQmZmsMLqsGnA4cJuwmZmsMKr42lAhYprQmZmsMLqsGnAOWfFQWZmsMLo/VLCgfa+wQAAuMK8+lJC4cJuwgAAuMKr42lAOWfFQQAAuMLo/VLCgfa+wQAAuMK8+lJCOWfFQQAAuMLo/VLChYprQgAAuMLqsGnAgfa+wWZmsMK8+lJC4cJuwmZmsMKr42lA4cJuwgAAuMKr42lAgfa+wWZmsMK8+lJC4cJuwgAAuMKr42lAgfa+wQAAuMK8+lJC4cJuwmZmsMKr42lAOWfFQWZmsMLo/VLCOWfFQQAAuMLo/VLC4cJuwmZmsMKr42lAOWfFQQAAuMLo/VLC4cJuwgAAuMKr42lAOWfFQWZmsMLo/VLChYprQmZmsMLqsGnAhYprQgAAuMLqsGnAOWfFQWZmsMLo/VLChYprQgAAuMLqsGnAOWfFQQAAuMLo/VLChYprQmZmsMLqsGnAgfa+wWZmsMK8+lJCgfa+wQAAuMK8+lJChYprQmZmsMLqsGnAgfa+wQAAuMK8+lJChYprQgAAuMLqsGnA4cJuwgAAuMKr42lAgfa+wQAAuMK8+lJChYprQgAAuMLqsGnA4cJuwgAAuMKr42lAhYprQgAAuMLqsGnAOWfFQQAAuMLo/VLCgfa+wZqZv8K8+lJC4cJuwpqZv8Kr42lAOWfFQZqZv8Lo/VLCgfa+wZqZv8K8+lJCOWfFQZqZv8Lo/VLChYprQpqZv8LqsGnAgfa+wQAAuMK8+lJC4cJuwgAAuMKr42lA4cJuwpqZv8Kr42lAgfa+wQAAuMK8+lJC4cJuwpqZv8Kr42lAgfa+wZqZv8K8+lJC4cJuwgAAuMKr42lAOWfFQQAAuMLo/VLCOWfFQZqZv8Lo/VLC4cJuwgAAuMKr42lAOWfFQZqZv8Lo/VLC4cJuwpqZv8Kr42lAOWfFQQAAuMLo/VLChYprQgAAuMLqsGnAhYprQpqZv8LqsGnAOWfFQQAAuMLo/VLChYprQpqZv8LqsGnAOWfFQZqZv8Lo/VLChYprQgAAuMLqsGnAgfa+wQAAuMK8+lJCgfa+wZqZv8K8+lJChYprQgAAuMLqsGnAgfa+wZqZv8K8+lJChYprQpqZv8LqsGnA4cJuwpqZv8Kr42lAgfa+wZqZv8K8+lJChYprQpqZv8LqsGnA4cJuwpqZv8Kr42lAhYprQpqZv8LqsGnAOWfFQZqZv8Lo/VLCgfa+wTMzx8K8+lJC4cJuwjMzx8Kr42lAOWfFQTMzx8Lo/VLCgfa+wTMzx8K8+lJCOWfFQTMzx8Lo/VLChYprQjMzx8LqsGnAgfa+wZqZv8K8+lJC4cJuwpqZv8Kr42lA4cJuwjMzx8Kr42lAgfa+wZqZv8K8+lJC4cJuwjMzx8Kr42lAgfa+wTMzx8K8+lJC4cJuwpqZv8Kr42lAOWfFQZqZv8Lo/VLCOWfFQTMzx8Lo/VLC4cJuwpqZv8Kr42lAOWfFQTMzx8Lo/VLC4cJuwjMzx8Kr42lAOWfFQZqZv8Lo/VLChYprQpqZv8LqsGnAhYprQjMzx8LqsGnAOWfFQZqZv8Lo/VLChYprQjMzx8LqsGnAOWfFQTMzx8Lo/VLChYprQpqZv8LqsGnAgfa+wZqZv8K8+lJCgfa+wTMzx8K8+lJChYprQpqZv8LqsGnAgfa+wTMzx8K8+lJChYprQjMzx8LqsGnA4cJuwjMzx8Kr42lAgfa+wTMzx8K8+lJChYprQjMzx8LqsGnA4cJuwjMzx8Kr42lAhYprQjMzx8LqsGnAOWfFQTMzx8Lo/VLCgfa+wc3MzsK8+lJC4cJuws3MzsKr42lAOWfFQc3MzsLo/VLCgfa+wc3MzsK8+lJCOWfFQc3MzsLo/VLChYprQs3MzsLqsGnAgfa+wTMzx8K8+lJC4cJuwjMzx8Kr42lA4cJuws3MzsKr42lAgfa+wTMzx8K8+lJC4cJuws3MzsKr42lAgfa+wc3MzsK8+lJC4cJuwjMzx8Kr42lAOWfFQTMzx8Lo/VLCOWfFQc3MzsLo/VLC4cJuwjMzx8Kr42lAOWfFQc3MzsLo/VLC4cJuws3MzsKr42lAOWfFQTMzx8Lo/VLChYprQjMzx8LqsGnAhYprQs3MzsLqsGnAOWfFQTMzx8Lo/VLChYprQs3MzsLqsGnAOWfFQc3MzsLo/VLChYprQjMzx8LqsGnAgfa+wTMzx8K8+lJCgfa+wc3MzsK8+lJChYprQjMzx8LqsGnAgfa+wc3MzsK8+lJChYprQs3MzsLqsGnA4cJuws3MzsKr42lAgfa+wc3MzsK8+lJChYprQs3MzsLqsGnA4cJuws3MzsKr42lAhYprQs3MzsLqsGnAOWfFQc3MzsLo/VLCgfa+wWZm1sK8+lJC4cJuwmZm1sKr42lAOWfFQWZm1sLo/VLCgfa+wWZm1sK8+lJCOWfFQWZm1sLo/VLChYprQmZm1sLqsGnAgfa+wc3MzsK8+lJC4cJuws3MzsKr42lA4cJuwmZm1sKr42lAgfa+wc3MzsK8+lJC4cJuwmZm1sKr42lAgfa+wWZm1sK8+lJC4cJuws3MzsKr42lAOWfFQc3MzsLo/VLCOWfFQWZm1sLo/VLC4cJuws3MzsKr42lAOWfFQWZm1sLo/VLC4cJuwmZm1sKr42lAOWfFQc3MzsLo/VLChYprQs3MzsLqsGnAhYprQmZm1sLqsGnAOWfFQc3MzsLo/VLChYprQmZm1sLqsGnAOWfFQWZm1sLo/VLChYprQs3MzsLqsGnAgfa+wc3MzsK8+lJCgfa+wWZm1sK8+lJChYprQs3MzsLqsGnAgfa+wWZm1sK8+lJChYprQmZm1sLqsGnA4cJuwmZm1sKr42lAgfa+wWZm1sK8+lJChYprQmZm1sLqsGnA4cJuwmZm1sKr42lAhYprQmZm1sLqsGnAOWfFQWZm1sLo/VLCgfa+wQAA3sK8+lJC4cJuwgAA3sKr42lAOWfFQQAA3sLo/VLCgfa+wQAA3sK8+lJCOWfFQQAA3sLo/VLChYprQgAA3sLqsGnAgfa+wWZm1sK8+lJC4cJuwmZm1sKr42lA4cJuwgAA3sKr42lAgfa+wWZm1sK8+lJC4cJuwgAA3sKr42lAgfa+wQAA3sK8+lJC4cJuwmZm1sKr42lAOWfFQWZm1sLo/VLCOWfFQQAA3sLo/VLC4cJuwmZm1sKr42lAOWfFQQAA3sLo/VLC4cJuwgAA3sKr42lAOWfFQWZm1sLo/VLChYprQmZm1sLqsGnAhYprQgAA3sLqsGnAOWfFQWZm1sLo/VLChYprQgAA3sLqsGnAOWfFQQAA3sLo/VLChYprQmZm1sLqsGnAgfa+wWZm1sK8+lJCgfa+wQAA3sK8+lJChYprQmZm1sLqsGnAgfa+wQAA3sK8+lJChYprQgAA3sLqsGnA4cJuwgAA3sKr42lAgfa+wQAA3sK8+lJChYprQgAA3sLqsGnA4cJuwgAA3sKr42lAhYprQgAA3sLqsGnAOWfFQQAA3sLo/VLCgfa+wZqZ5cK8+lJC4cJuwpqZ5cKr42lAOWfFQZqZ5cLo/VLCgfa+wZqZ5cK8+lJCOWfFQZqZ5cLo/VLChYprQpqZ5cLqsGnAgfa+wQAA3sK8+lJC4cJuwgAA3sKr42lA4cJuwpqZ5cKr42lAgfa+wQAA3sK8+lJC4cJuwpqZ5cKr42lAgfa+wZqZ5cK8+lJC4cJuwgAA3sKr42lAOWfFQQAA3sLo/VLCOWfFQZqZ5cLo/VLC4cJuwgAA3sKr42lAOWfFQZqZ5cLo/VLC4cJuwpqZ5cKr42lAOWfFQQAA3sLo/VLChYprQgAA3sLqsGnAhYprQpqZ5cLqsGnAOWfFQQAA3sLo/VLChYprQpqZ5cLqsGnAOWfFQZqZ5cLo/VLChYprQgAA3sLqsGnAgfa+wQAA3sK8+lJCgfa+wZqZ5cK8+lJChYprQgAA3sLqsGnAgfa+wZqZ5cK8+lJChYprQpqZ5cLqsGnA4cJuwpqZ5cKr42lAgfa+wZqZ5cK8+lJChYprQpqZ5cLqsGnA4cJuwpqZ5cKr42lAhYprQpqZ5cLqsGnAOWfFQZqZ5cLo/VLCgfa+wTMz7cK8+lJC4cJuwjMz7cKr42lAOWfFQTMz7cLo/VLCgfa+wTMz7cK8+lJCOWfFQTMz7cLo/VLChYprQjMz7cLqsGnAgfa+wZqZ5cK8+lJC4cJuwpqZ5cKr42lA4cJuwjMz7cKr42lAgfa+wZqZ5cK8+lJC4cJuwjMz7cKr42lAgfa+wTMz7cK8+lJC4cJuwpqZ5cKr42lAOWfFQZqZ5cLo/VLCOWfFQTMz7cLo/VLC4cJuwpqZ5cKr42lAOWfFQTMz7cLo/VLC4cJuwjMz7cKr42lAOWfFQZqZ5cLo/VLChYprQpqZ5cLqsGnAhYprQjMz7cLqsGnAOWfFQZqZ5cLo/VLChYprQjMz7cLqsGnAOWfFQTMz7cLo/VLChYprQpqZ5cLqsGnAgfa+wZqZ5cK8+lJCgfa+wTMz7cK8+lJChYprQpqZ5cLqsGnAgfa+wTMz7cK8+lJChYprQjMz7cLqsGnA4cJuwjMz7cKr42lAgfa+wTMz7cK8+lJChYprQjMz7cLqsGnA4cJuwjMz7cKr42lAhYprQjMz7cLqsGnAOWfFQTMz7cLo/VLCgfa+wc3M9MK8+lJC4cJuws3M9MKr42lAOWfFQc3M9MLo/VLCgfa+wc3M9MK8+lJCOWfFQc3M9MLo/VLChYprQs3M9MLqsGnAgfa+wTMz7cK8+lJC4cJuwjMz7cKr42lA4cJuws3M9MKr42lAgfa+wTMz7cK8+lJC4cJuws3M9MKr42lAgfa+wc3M9MK8+lJC4cJuwjMz7cKr42lAOWfFQTMz7cLo/VLCOWfFQc3M9MLo/VLC4cJuwjMz7cKr42lAOWfFQc3M9MLo/VLC4cJuws3M9MKr42lAOWfFQTMz7cLo/VLChYprQjMz7cLqsGnAhYprQs3M9MLqsGnAOWfFQTMz7cLo/VLChYprQs3M9MLqsGnAOWfFQc3M9MLo/VLChYprQjMz7cLqsGnAgfa+wTMz7cK8+lJCgfa+wc3M9MK8+lJChYprQjMz7cLqsGnAgfa+wc3M9MK8+lJChYprQs3M9MLqsGnA4cJuws3M9MKr42lAgfa+wc3M9MK8+lJChYprQs3M9MLqsGnA4cJuws3M9MKr42lAhYprQs3M9MLqsGnAOWfFQc3M9MLo/VLCgfa+wWZm/MK8+lJC4cJuwmZm/MKr42lAOWfFQWZm/MLo/VLCgfa+wWZm/MK8+lJCOWfFQWZm/MLo/VLChYprQmZm/MLqsGnAgfa+wc3M9MK8+lJC4cJuws3M9MKr42lA4cJuwmZm/MKr42lAgfa+wc3M9MK8+lJC4cJuwmZm/MKr42lAgfa+wWZm/MK8+lJC4cJuws3M9MKr42lAOWfFQc3M9MLo/VLCOWfFQWZm/MLo/VLC4cJuws3M9MKr42lAOWfFQWZm/MLo/VLC4cJuwmZm/MKr42lAOWfFQc3M9MLo/VLChYprQs3M9MLqsGnAhYprQmZm/MLqsGnAOWfFQc3M9MLo/VLChYprQmZm/MLqsGnAOWfFQWZm/MLo/VLChYprQs3M9MLqsGnAgfa+wc3M9MK8+lJCgfa+wWZm/MK8+lJChYprQs3M9MLqsGnAgfa+wWZm/MK8+lJChYprQmZm/MLqsGnA4cJuwmZm/MKr42lAgfa+wWZm/MK8+lJChYprQmZm/MLqsGnA4cJuwmZm/MKr42lAhYprQmZm/MLqsGnAOWfFQWZm/MLo/VLCgfa+wQAAAsO8+lJC4cJuwgAAAsOr42lAOWfFQQAAAsPo/VLCgfa+wQAAAsO8+lJCOWfFQQAAAsPo/VLChYprQgAAAsPqsGnAgfa+wWZm/MK8+lJC4cJuwmZm/MKr42lA4cJuwgAAAsOr42lAgfa+wWZm/MK8+lJC4cJuwgAAAsOr42lAgfa+wQAAAsO8+lJC4cJuwmZm/MKr42lAOWfFQWZm/MLo/VLCOWfFQQAAAsPo/VLC4cJuwmZm/MKr42lAOWfFQQAAAsPo/VLC4cJuwgAAAsOr42lAOWfFQWZm/MLo/VLChYprQmZm/MLqsGnAhYprQgAAAsPqsGnAOWfFQWZm/MLo/VLChYprQgAAAsPqsGnAOWfFQQAAAsPo/VLChYprQmZm/MLqsGnAgfa+wWZm/MK8+lJCgfa+wQAAAsO8+lJChYprQmZm/MLqsGnAgfa+wQAAAsO8+lJChYprQgAAAsPqsGnA4cJuwgAAAsOr42lAgfa+wQAAAsO8+lJChYprQgAAAsPqsGnA4cJuwgAAAsOr42lAhYprQgAAAsPqsGnAOWfFQQAAAsPo/VLCgfa+wc3MBcO8+lJC4cJuws3MBcOr42lAOWfFQc3MBcPo/VLCgfa+wc3MBcO8+lJCOWfFQc3MBcPo/VLChYprQs3MBcPqsGnAgfa+wQAAAsO8+lJC4cJuwgAAAsOr42lA4cJuws3MBcOr42lAgfa+wQAAAsO8+lJC4cJuws3MBcOr42lAgfa+wc3MBcO8+lJC4cJuwgAAAsOr42lAOWfFQQAAAsPo/VLCOWfFQc3MBcPo/VLC4cJuwgAAAsOr42lAOWfFQc3MBcPo/VLC4cJuws3MBcOr42lAOWfFQQAAAsPo/VLChYprQgAAAsPqsGnAhYprQs3MBcPqsGnAOWfFQQAAAsPo/VLChYprQs3MBcPqsGnAOWfFQc3MBcPo/VLChYprQgAAAsPqsGnAgfa+wQAAAsO8+lJCgfa+wc3MBcO8+lJChYprQgAAAsPqsGnAgfa+wc3MBcO8+lJChYprQs3MBcPqsGnA4cJuws3MBcOr42lAgfa+wc3MBcO8+lJChYprQs3MBcPqsGnA4cJuws3MBcOr42lAhYprQs3MBcPqsGnAOWfFQc3MBcPo/VLCgfa+wZqZCcO8+lJC4cJuwpqZCcOr42lAOWfFQZqZCcPo/VLCgfa+wZqZCcO8+lJCOWfFQZqZCcPo/VLChYprQpqZCcPqsGnAgfa+wc3MBcO8+lJC4cJuws3MBcOr42lA4cJuwpqZCcOr42lAgfa+wc3MBcO8+lJC4cJuwpqZCcOr42lAgfa+wZqZCcO8+lJC4cJuws3MBcOr42lAOWfFQc3MBcPo/VLCOWfFQZqZCcPo/VLC4cJuws3MBcOr42lAOWfFQZqZCcPo/VLC4cJuwpqZCcOr42lAOWfFQc3MBcPo/VLChYprQs3MBcPqsGnAhYprQpqZCcPqsGnAOWfFQc3MBcPo/VLChYprQpqZCcPqsGnAOWfFQZqZCcPo/VLChYprQs3MBcPqsGnAgfa+wc3MBcO8+lJCgfa+wZqZCcO8+lJChYprQs3MBcPqsGnAgfa+wZqZCcO8+lJChYprQpqZCcPqsGnA4cJuwpqZCcOr42lAgfa+wZqZCcO8+lJChYprQpqZCcPqsGnA4cJuwpqZCcOr42lAhYprQpqZCcPqsGnAOWfFQZqZCcPo/VLCgfa+wWZmDcO8+lJC4cJuwmZmDcOr42lAOWfFQWZmDcPo/VLCgfa+wWZmDcO8+lJCOWfFQWZmDcPo/VLChYprQmZmDcPqsGnAgfa+wZqZCcO8+lJC4cJuwpqZCcOr42lA4cJuwmZmDcOr42lAgfa+wZqZCcO8+lJC4cJuwmZmDcOr42lAgfa+wWZmDcO8+lJC4cJuwpqZCcOr42lAOWfFQZqZCcPo/VLCOWfFQWZmDcPo/VLC4cJuwpqZCcOr42lAOWfFQWZmDcPo/VLC4cJuwmZmDcOr42lAOWfFQZqZCcPo/VLChYprQpqZCcPqsGnAhYprQmZmDcPqsGnAOWfFQZqZCcPo/VLChYprQmZmDcPqsGnAOWfFQWZmDcPo/VLChYprQpqZCcPqsGnAgfa+wZqZCcO8+lJCgfa+wWZmDcO8+lJChYprQpqZCcPqsGnAgfa+wWZmDcO8+lJChYprQmZmDcPqsGnA4cJuwmZmDcOr42lAgfa+wWZmDcO8+lJChYprQmZmDcPqsGnA4cJuwmZmDcOr42lAhYprQmZmDcPqsGnAOWfFQWZmDcPo/VLCgfa+wTMzEcO8+lJC4cJuwjMzEcOr42lAOWfFQTMzEcPo/VLCgfa+wTMzEcO8+lJCOWfFQTMzEcPo/VLChYprQjMzEcPqsGnAgfa+wWZmDcO8+lJC4cJuwmZmDcOr42lA4cJuwjMzEcOr42lAgfa+wWZmDcO8+lJC4cJuwjMzEcOr42lAgfa+wTMzEcO8+lJC4cJuwmZmDcOr42lAOWfFQWZmDcPo/VLCOWfFQTMzEcPo/VLC4cJuwmZmDcOr42lAOWfFQTMzEcPo/VLC4cJuwjMzEcOr42lAOWfFQWZmDcPo/VLChYprQmZmDcPqsGnAhYprQjMzEcPqsGnAOWfFQWZmDcPo/VLChYprQjMzEcPqsGnAOWfFQTMzEcPo/VLChYprQmZmDcPqsGnAgfa+wWZmDcO8+lJCgfa+wTMzEcO8+lJChYprQmZmDcPqsGnAgfa+wTMzEcO8+lJChYprQjMzEcPqsGnA4cJuwjMzEcOr42lAgfa+wTMzEcO8+lJChYprQjMzEcPqsGnA4cJuwjMzEcOr42lAhYprQjMzEcPqsGnAOWfFQTMzEcPo/VLCgfa+wQAAFcO8+lJC4cJuwgAAFcOr42lAOWfFQQAAFcPo/VLCgfa+wQAAFcO8+lJCOWfFQQAAFcPo/VLChYprQgAAFcPqsGnAgfa+wTMzEcO8+lJC4cJuwjMzEcOr42lA4cJuwgAAFcOr42lAgfa+wTMzEcO8+lJC4cJuwgAAFcOr42lAgfa+wQAAFcO8+lJC4cJuwjMzEcOr42lAOWfFQTMzEcPo/VLCOWfFQQAAFcPo/VLC4cJuwjMzEcOr42lAOWfFQQAAFcPo/VLC4cJuwgAAFcOr42lAOWfFQTMzEcPo/VLChYprQjMzEcPqsGnAhYprQgAAFcPqsGnAOWfFQTMzEcPo/VLChYprQgAAFcPqsGnAOWfFQQAAFcPo/VLChYprQjMzEcPqsGnAgfa+wTMzEcO8+lJCgfa+wQAAFcO8+lJChYprQjMzEcPqsGnAgfa+wQAAFcO8+lJChYprQgAAFcPqsGnA4cJuwgAAFcOr42lAgfa+wQAAFcO8+lJChYprQgAAFcPqsGnA4cJuwgAAFcOr42lAhYprQgAAFcPqsGnAOWfFQQAAFcPo/VLCgfa+wc3MGMO8+lJC4cJuws3MGMOr42lAOWfFQc3MGMPo/VLCgfa+wc3MGMO8+lJCOWfFQc3MGMPo/VLChYprQs3MGMPqsGnAgfa+wQAAFcO8+lJC4cJuwgAAFcOr42lA4cJuws3MGMOr42lAgfa+wQAAFcO8+lJC4cJuws3MGMOr42lAgfa+wc3MGMO8+lJC4cJuwgAAFcOr42lAOWfFQQAAFcPo/VLCOWfFQc3MGMPo/VLC4cJuwgAAFcOr42lAOWfFQc3MGMPo/VLC4cJuws3MGMOr42lAOWfFQQAAFcPo/VLChYprQgAAFcPqsGnAhYprQs3MGMPqsGnAOWfFQQAAFcPo/VLChYprQs3MGMPqsGnAOWfFQc3MGMPo/VLChYprQgAAFcPqsGnAgfa+wQAAFcO8+lJCgfa+wc3MGMO8+lJChYprQgAAFcPqsGnAgfa+wc3MGMO8+lJChYprQs3MGMPqsGnA";
+
+(async () => {
+  try {
+    const binary = atob(b64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob   = new Blob([bytes.buffer], { type: 'model/gltf-binary' });
+    const url    = URL.createObjectURL(blob);
+
+    document.getElementById('load-sub').textContent = 'Parsing geometry…';
+
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
+    loader.setMeshoptDecoder(MeshoptDecoder);
+
+    loader.load(url, gltf => {
+      loadedModel = gltf.scene;
+
+      let verts = 0, tris = 0, objs = 0;
+      loadedModel.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          if (child.material) {
+            child.material.side = THREE.DoubleSide;
+            originalMaterials.set(child.uuid, child.material.clone ? child.material.clone() : child.material);
+          }
+          if (child.geometry) {
+            verts += child.geometry.attributes.position
+              ? child.geometry.attributes.position.count : 0;
+            tris += child.geometry.index
+              ? child.geometry.index.count / 3
+              : (child.geometry.attributes.position ? child.geometry.attributes.position.count / 3 : 0);
+          }
+          objs++;
+        }
+      });
+
+      scene.add(loadedModel);
+      populateSceneTree(loadedModel);
+      populateSideTabs(loadedModel);
+
+      // Camera fit
+      const box    = new THREE.Box3().setFromObject(loadedModel);
+      const center = box.getCenter(new THREE.Vector3());
+      const size   = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      camera.position.set(center.x + maxDim, center.y + maxDim * 0.65, center.z + maxDim * 1.2);
+      controls.target.copy(center);
+      controls.update();
+      grid.position.y = box.min.y;
+
+      // Animations
+      if (gltf.animations && gltf.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(loadedModel);
+        gltf.animations.forEach(clip => mixer.clipAction(clip).play());
+        animDuration = gltf.animations[0].duration;
+        animPlaying  = true;
+        document.getElementById('btn-play').textContent = '⏸';
+      }
+
+      // Stats
+      document.getElementById('stat-objects').textContent = objs + ' objects';
+      document.getElementById('stat-verts').textContent   = Math.round(verts).toLocaleString() + ' vertices';
+      document.getElementById('stat-tris').textContent    = Math.round(tris).toLocaleString() + ' triangles';
+
+      document.getElementById('loading-overlay').classList.add('hidden');
+      revisionNum++;
+      document.getElementById('revision-label').textContent = 'r' + revisionNum;
+      URL.revokeObjectURL(url);
+
+    }, progress => {
+      if (progress.total > 0) {
+        const pct = Math.round(progress.loaded / progress.total * 100);
+        document.getElementById('load-sub').textContent = 'Loading… ' + pct + '%';
+      }
+    }, err => {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      console.error(err);
+    });
+
+  } catch (e) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    console.error(e);
+  }
+})();
+
+/* ── Scene Tree ── */
+function populateSceneTree(model) {
+  const tree = document.getElementById('scene-tree');
+
+  function addNode(obj, depth) {
+    if (obj.name === '' && obj.children.length === 0) return;
+    const el = document.createElement('div');
+    el.className = 'tree-item';
+    el.style.paddingLeft = (18 + depth * 12) + 'px';
+    const icon = obj.isMesh ? '◼' : (obj.isLight ? '☀' : '⬡');
+    el.innerHTML = `<span class="icon">${icon}</span><span class="name">${obj.name || obj.type}</span>`;
+    el.onclick = () => {
+      document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+    };
+    tree.appendChild(el);
+    obj.children.forEach(c => addNode(c, depth + 1));
+  }
+
+  addNode(model, 1);
+}
+
+/* ── Side Tab Lists ── */
+const geoSet = new Set(), matSet = new Set(), texSet = new Set();
+function populateSideTabs(model) {
+  model.traverse(child => {
+    if (child.isMesh && child.geometry) {
+      geoSet.add(child.geometry.uuid.slice(0,8));
+    }
+    if (child.isMesh && child.material) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(m => {
+        matSet.add(m.name || m.type);
+        if (m.map) texSet.add('Texture');
+        if (m.normalMap) texSet.add('NormalMap');
+        if (m.roughnessMap) texSet.add('RoughnessMap');
+      });
+    }
+  });
+
+  const fill = (id, set) => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    set.forEach(v => {
+      const d = document.createElement('div');
+      d.style.cssText = 'padding:2px 0;color:#777;';
+      d.textContent = v;
+      el.appendChild(d);
+    });
+  };
+  fill('btab-geometries', geoSet);
+  fill('btab-materials',  matSet);
+  fill('btab-textures',   texSet);
+}
+
+/* ── Axes Gizmo ── */
+const gizmoCanvas = document.getElementById('axes-gizmo');
+gizmoCanvas.width  = 128;
+gizmoCanvas.height = 128;
+const gizCtx = gizmoCanvas.getContext('2d');
+
+function drawGizmo() {
+  const W = gizmoCanvas.width, H = gizmoCanvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R  = 46; // arm length in px
+
+  gizCtx.clearRect(0, 0, W, H);
+
+  const mat = new THREE.Matrix4().extractRotation(camera.matrixWorldInverse);
+
+  const axes = [
+    { dir: new THREE.Vector3( 1, 0, 0), label: 'X', col: '#ff3333' },
+    { dir: new THREE.Vector3( 0, 1, 0), label: 'Y', col: '#33ff55' },
+    { dir: new THREE.Vector3( 0, 0, 1), label: 'Z', col: '#3399ff' },
+  ].map(a => {
+    const v = a.dir.clone().applyMatrix4(mat);
+    return { ...a, vx: v.x, vy: v.y, vz: v.z };
+  });
+
+  // Sort back-to-front so closer axes paint on top
+  axes.sort((a, b) => a.vz - b.vz);
+
+  axes.forEach(a => {
+    const tx = cx + a.vx * R;
+    const ty = cy - a.vy * R;
+    const depth = (a.vz + 1) / 2; // 0 = back, 1 = front
+    const alpha = 0.35 + 0.65 * depth;
+
+    // Glow effect
+    gizCtx.shadowColor = a.col;
+    gizCtx.shadowBlur  = 8;
+
+    // Shaft
+    gizCtx.beginPath();
+    gizCtx.moveTo(cx, cy);
+    gizCtx.lineTo(tx, ty);
+    gizCtx.strokeStyle = a.col;
+    gizCtx.globalAlpha = alpha;
+    gizCtx.lineWidth   = 3;
+    gizCtx.lineCap     = 'round';
+    gizCtx.stroke();
+
+    // Arrowhead (filled circle at tip)
+    gizCtx.beginPath();
+    gizCtx.arc(tx, ty, 5, 0, Math.PI * 2);
+    gizCtx.fillStyle = a.col;
+    gizCtx.fill();
+
+    // Label
+    gizCtx.shadowBlur  = 0;
+    gizCtx.font        = 'bold 13px Arial';
+    gizCtx.fillStyle   = a.col;
+    gizCtx.globalAlpha = alpha;
+    gizCtx.textAlign   = 'center';
+    gizCtx.textBaseline= 'middle';
+    const lx = cx + a.vx * (R + 14);
+    const ly = cy - a.vy * (R + 14);
+    gizCtx.fillText(a.label, lx, ly);
+
+    // Reset
+    gizCtx.globalAlpha = 1;
+    gizCtx.shadowBlur  = 0;
+  });
+
+  // Centre dot
+  gizCtx.beginPath();
+  gizCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+  gizCtx.fillStyle = '#ffffff';
+  gizCtx.fill();
+}
+
+/* ── Render Loop ── */
+let lastTime = performance.now();
+(function animate() {
+  requestAnimationFrame(animate);
+  const now   = performance.now();
+  const delta = (now - lastTime) / 1000;
+  lastTime = now;
+
+  if (mixer && animPlaying) {
+    mixer.update(delta);
+    animTime = (animTime + delta) % (animDuration || 1);
+    document.getElementById('anim-time').textContent =
+      animTime.toFixed(2) + ' / ' + (animDuration || 0).toFixed(2);
+  }
+  controls.update();
+
+  const t0 = performance.now();
+  renderer.render(scene, camera);
+  const renderMs = (performance.now() - t0).toFixed(1);
+  document.getElementById('stat-render').textContent = renderMs + ' ms render time';
+
+  drawGizmo();
+})();
+
+/* ── Resize ── */
+window.addEventListener('resize', () => {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+/* ── Exposed Controls ── */
+window.resetCamera = function() {
+  if (!loadedModel) return;
+  const box    = new THREE.Box3().setFromObject(loadedModel);
+  const center = box.getCenter(new THREE.Vector3());
+  const size   = box.getSize(new THREE.Vector3());
+  const m      = Math.max(size.x, size.y, size.z);
+  camera.position.set(center.x + m, center.y + m * 0.65, center.z + m * 1.2);
+  controls.target.copy(center);
+  controls.update();
+};
+
+window.toggleGrid = function() {
+  gridVisible = !gridVisible;
+  grid.visible = gridVisible;
+};
+
+window.toggleWireframe = function() {
+  wireframeMode = !wireframeMode;
+  if (loadedModel) loadedModel.traverse(child => {
+    if (child.isMesh && child.material) child.material.wireframe = wireframeMode;
+  });
+  // keep render-mode select in sync
+  document.getElementById('render-mode').value = wireframeMode ? 'wireframe' : 'solid';
+};
+
+window.toggleAutoRotate = function() {
+  controls.autoRotate = !controls.autoRotate;
+  controls.autoRotateSpeed = 1.5;
+};
+
+window.switchCamera = function(val) {
+  if (!loadedModel) return;
+  const box    = new THREE.Box3().setFromObject(loadedModel);
+  const center = box.getCenter(new THREE.Vector3());
+  const m      = Math.max(...box.getSize(new THREE.Vector3()).toArray()) * 1.5;
+  if (val === 'top') {
+    camera.position.set(center.x, center.y + m, center.z);
+  } else if (val === 'front') {
+    camera.position.set(center.x, center.y, center.z + m);
+  } else if (val === 'side') {
+    camera.position.set(center.x + m, center.y, center.z);
+  } else {
+    window.resetCamera();
+  }
+  controls.target.copy(center);
+  controls.update();
+};
+
+window.switchRenderMode = function(val) {
+  renderMode = val;
+  if (!loadedModel) return;
+  if (val === 'wireframe') {
+    loadedModel.traverse(c => { if (c.isMesh && c.material) c.material.wireframe = true; });
+    wireframeMode = true;
+  } else if (val === 'solid') {
+    loadedModel.traverse(c => {
+      if (c.isMesh && c.material) {
+        c.material.wireframe = false;
+        const orig = originalMaterials.get(c.uuid);
+        if (orig) c.material = orig.clone ? orig.clone() : orig;
+      }
+    });
+    wireframeMode = false;
+  } else if (val === 'material') {
+    loadedModel.traverse(c => { if (c.isMesh && c.material) c.material.wireframe = false; });
+    wireframeMode = false;
+  }
+};
+
+window.setBgColor = function(hex) {
+  scene.background = new THREE.Color(hex);
+};
+
+window.setToneMapping = function(val) {
+  const maps = [THREE.NoToneMapping, THREE.LinearToneMapping, THREE.ReinhardToneMapping,
+                THREE.CineonToneMapping, THREE.ACESFilmicToneMapping];
+  renderer.toneMapping = maps[+val] || THREE.ReinhardToneMapping;
+};
+
+window.setTool = function(t) {
+  document.querySelectorAll('.vp-tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + t).classList.add('active');
+};
+
+/* ── Animation ── */
+window.togglePlay = function() {
+  if (!mixer) return;
+  animPlaying = !animPlaying;
+  if (animPlaying) {
+    mixer.timeScale = 1;
+    document.getElementById('btn-play').textContent = '⏸';
+  } else {
+    document.getElementById('btn-play').textContent = '▶';
+  }
+};
+window.stopAnim = function() {
+  if (!mixer) return;
+  animPlaying = false;
+  animTime    = 0;
+  mixer.setTime(0);
+  document.getElementById('btn-play').textContent = '▶';
+  document.getElementById('anim-time').textContent = '0.00 / ' + (animDuration || 0).toFixed(2);
+};
+window.stepFrame = function() {
+  if (!mixer) return;
+  animTime = Math.min(animTime + 1/30, animDuration);
+  mixer.setTime(animTime);
+};
+
+/* ── Open in Browser ── */
+window.openInBrowser = function() {
+  window.open(window.location.href, '_blank');
+};
+</script>
+
+<!-- ── UI Scripts (non-module) ── -->
+<script>
+/* Menu toggles */
+function toggleMenu(id) {
+  const active = document.querySelector('.menu-item.active');
+  const clicked = document.getElementById('menu-' + id);
+  if (active === clicked) {
+    clicked.classList.remove('active');
+  } else {
+    if (active) active.classList.remove('active');
+    clicked.classList.add('active');
+  }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu-item')) {
+    const active = document.querySelector('.menu-item.active');
+    if (active) active.classList.remove('active');
+  }
+});
+
+/* Right panel top tabs */
+function switchRpTab(name, el) {
+  document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rp-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rp-' + name).classList.add('active');
+}
+
+/* Right panel bottom tabs */
+function switchBTab(name, el) {
+  document.querySelectorAll('.rp-btab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rp-bcontent').forEach(p => p.style.display = 'none');
+  el.classList.add('active');
+  document.getElementById('btab-' + name).style.display = 'block';
+}
+</script>
+
+</body>
+</html>

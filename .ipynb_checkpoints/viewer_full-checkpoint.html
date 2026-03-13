@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CityEngine 3D Viewer + Interactive Map</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #0a0a1a; font-family: 'Inter', 'Segoe UI', sans-serif; }
+
+        #container { display: flex; width: 100vw; height: 100vh; }
+
+        /* ── Viewer Panel ── */
+        #viewer-panel { flex: 1; position: relative; overflow: hidden; }
+
+        /* ── Toolbar ── */
+        #toolbar {
+            position: absolute; top: 16px; left: 16px; z-index: 10;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        #status {
+            background: rgba(10, 10, 26, 0.9);
+            backdrop-filter: blur(12px);
+            color: #00e676;
+            padding: 12px 16px; border-radius: 10px;
+            font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px;
+            min-width: 280px;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .btn {
+            background: rgba(99, 102, 241, 0.85);
+            backdrop-filter: blur(8px);
+            color: white; border: none;
+            padding: 10px 18px; border-radius: 8px; cursor: pointer;
+            font-weight: 600; font-size: 12px; font-family: 'Inter', sans-serif;
+            box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn:hover { background: rgba(79, 82, 221, 0.95); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4); }
+        .btn:active { transform: translateY(0); }
+        .btn.secondary { background: rgba(55, 65, 81, 0.85); box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+        .btn.secondary:hover { background: rgba(75, 85, 99, 0.95); }
+
+        /* ── Info Bar ── */
+        #info-bar {
+            position: absolute; bottom: 12px; left: 12px; z-index: 10;
+            background: rgba(10, 10, 26, 0.75);
+            backdrop-filter: blur(8px);
+            color: #94a3b8; padding: 8px 14px;
+            border-radius: 8px; font-size: 11px;
+            font-family: 'Cascadia Code', Consolas, monospace;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* ── Loading Overlay ── */
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 26, 0.92);
+            backdrop-filter: blur(20px);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 100; transition: opacity 0.5s ease;
+        }
+        #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loader-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(99, 102, 241, 0.15);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-text {
+            color: #e2e8f0; font-size: 14px; font-weight: 500;
+            margin-top: 16px; letter-spacing: 0.02em;
+        }
+        .loader-sub {
+            color: #64748b; font-size: 12px; margin-top: 6px;
+        }
+
+        /* ── Map Panel ── */
+        #map-panel {
+            width: 380px; position: relative;
+            border-left: 1px solid rgba(99, 102, 241, 0.3);
+            transition: width 0.3s ease, opacity 0.3s ease;
+        }
+        #map-panel.collapsed { width: 0; opacity: 0; overflow: hidden; border: none; }
+        #map { width: 100%; height: 100%; }
+        #map-header {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.92), rgba(99, 102, 241, 0.78));
+            backdrop-filter: blur(8px);
+            color: white; padding: 12px 16px; font-weight: 600; font-size: 13px;
+            text-align: center; letter-spacing: 0.02em;
+        }
+
+        /* ── Toggle Map Button ── */
+        #toggle-map {
+            position: absolute; top: 50%; right: 0; transform: translateY(-50%);
+            z-index: 1000;
+            background: rgba(99, 102, 241, 0.9);
+            backdrop-filter: blur(8px);
+            color: white; border: none;
+            padding: 18px 8px; cursor: pointer; font-size: 15px;
+            border-radius: 8px 0 0 8px;
+            box-shadow: -2px 0 12px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-right: none;
+        }
+        #toggle-map:hover { background: rgba(79, 82, 221, 0.95); padding-right: 12px; }
+
+        /* ── Animation Badge ── */
+        #anim-badge {
+            position: absolute; top: 16px; right: 16px; z-index: 10;
+            background: rgba(16, 185, 129, 0.85);
+            backdrop-filter: blur(8px);
+            color: white; padding: 8px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+            display: none;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
+        }
+        #anim-badge.visible { display: flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="viewer-panel">
+            <!-- Loading Overlay -->
+            <div id="loading-overlay">
+                <div class="loader-spinner"></div>
+                <div class="loader-text">Loading 3D Model...</div>
+                <div class="loader-sub" id="load-progress">Initializing viewer</div>
+            </div>
+
+            <!-- Toolbar -->
+            <div id="toolbar">
+                <div id="status">⏳ Initializing...</div>
+                <button class="btn" onclick="resetCamera()">🎯 Focus Building</button>
+                <button class="btn secondary" onclick="toggleWireframe()">📐 Wireframe</button>
+                <button class="btn secondary" onclick="toggleAutoRotate()">🔄 Auto Rotate</button>
+                <button class="btn secondary" onclick="toggleGrid()">🔲 Grid</button>
+            </div>
+
+            <!-- Animation Badge -->
+            <div id="anim-badge">▶ Animations Playing</div>
+
+            <!-- Info Bar -->
+            <div id="info-bar">Left = Rotate · Scroll = Zoom · Right = Pan</div>
+
+            <!-- Toggle Map -->
+            <button id="toggle-map" onclick="toggleMapPanel()">🗺</button>
+        </div>
+
+        <!-- Map Panel -->
+        <div id="map-panel">
+            <div id="map-header">🗺 Interactive Map</div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script>
+    // ── Map Setup ──
+    var mapObj = L.map("map", { zoomControl: true }).setView([15, 45], 16);
+    var sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "Esri" });
+    var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "OSM" });
+    sat.addTo(mapObj);
+    L.control.layers({ "Satellite": sat, "OpenStreetMap": osm }).addTo(mapObj);
+
+    var drawnItems = new L.FeatureGroup();
+    mapObj.addLayer(drawnItems);
+    mapObj.addControl(new L.Control.Draw({
+        draw: {
+            polygon: { shapeOptions: { color: "#6366f1", weight: 3 } },
+            rectangle: { shapeOptions: { color: "#6366f1", weight: 3 } },
+            polyline: { shapeOptions: { color: "#10b981", weight: 3 } },
+            circle: false, circlemarker: false, marker: true
+        },
+        edit: { featureGroup: drawnItems }
+    }));
+    mapObj.on(L.Draw.Event.CREATED, function (e) { drawnItems.addLayer(e.layer); });
+
+    var mapVisible = true;
+    window.toggleMapPanel = function () {
+        var p = document.getElementById("map-panel");
+        mapVisible = !mapVisible;
+        if (mapVisible) {
+            p.classList.remove("collapsed");
+        } else {
+            p.classList.add("collapsed");
+        }
+        document.getElementById("toggle-map").textContent = mapVisible ? "🗺" : "📍";
+        if (mapVisible) setTimeout(function () { mapObj.invalidateSize(); }, 350);
+        window.dispatchEvent(new Event("resize"));
+    };
+    </script>
+
+    <!-- Three.js + Addons via Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+    // ── Helpers ──
+    var log = function (m) { document.getElementById("status").innerHTML = m; };
+    var wireframeMode = false, loadedModel = null, gridVisible = true, mixer = null;
+    var clock = new THREE.Clock();
+    var viewerPanel = document.getElementById("viewer-panel");
+
+    // ── Scene ──
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB);
+    scene.fog = new THREE.Fog(0x87CEEB, 800, 3000);
+
+    // ── Camera ──
+    var camera = new THREE.PerspectiveCamera(45, viewerPanel.clientWidth / viewerPanel.clientHeight, 0.1, 5000);
+    camera.position.set(150, 200, 250);
+
+    // ── Renderer ──
+    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(viewerPanel.clientWidth, viewerPanel.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    viewerPanel.appendChild(renderer.domElement);
+
+    // ── Controls ──
+    var controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 0, 0);
+
+    // ── Lighting ──
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    var dL = new THREE.DirectionalLight(0xffffff, 1.4);
+    dL.position.set(100, 200, 100);
+    dL.castShadow = true;
+    dL.shadow.mapSize.set(2048, 2048);
+    dL.shadow.camera.left = -200;
+    dL.shadow.camera.right = 200;
+    dL.shadow.camera.top = 200;
+    dL.shadow.camera.bottom = -200;
+    dL.shadow.camera.near = 0.5;
+    dL.shadow.camera.far = 1000;
+    dL.shadow.bias = -0.0005;
+    scene.add(dL);
+
+    var dL2 = new THREE.DirectionalLight(0xffeedd, 0.4);
+    dL2.position.set(-80, 120, -60);
+    scene.add(dL2);
+
+    scene.add(new THREE.HemisphereLight(0x87CEEB, 0x362D1B, 0.6));
+
+    // ── Ground ──
+    var gGeo = new THREE.PlaneGeometry(2000, 2000);
+    var gMat = new THREE.MeshStandardMaterial({ color: 0x4a7c59, roughness: 0.85, metalness: 0.05 });
+    var ground = new THREE.Mesh(gGeo, gMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ── Grid + Axes ──
+    var gridHelper = new THREE.GridHelper(500, 50, 0x888888, 0x444444);
+    gridHelper.position.y = 0.1;
+    scene.add(gridHelper);
+    scene.add(new THREE.AxesHelper(50));
+
+    // ── GLB Loader with Draco + Meshopt ──
+    document.getElementById("load-progress").textContent = "Setting up loaders...";
+    log("📦 Preparing model loaders...");
+
+    var gltfLoader = new GLTFLoader();
+
+    // Draco Decoder
+    var dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/");
+    gltfLoader.setDRACOLoader(dracoLoader);
+
+    // Meshopt Decoder
+    gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+
+    // ── Load base64 model ──
+    document.getElementById("load-progress").textContent = "Decoding model data...";
+    log("📦 Decoding Base64 model...");
+
+    var b64 = "Z2xURgIAAABoSAAAzAQAAEpTT057ImFjY2Vzc29ycyI6W3siYnVmZmVyVmlldyI6MCwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjcyLCJtYXgiOls3NC45ODc4OTk3ODAyNzM0NCw2LjkzODg5MzkwMzkwNzIyOGUtMTgsNTYuMTg3NDM4OTY0ODQzNzVdLCJtaW4iOlstNzQuOTg3NTQxMTk4NzMwNDcsLTguMzk5OTk5NjE4NTMwMjczLC01Ni4xODc0Mzg5NjQ4NDM3NV0sInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3IjoxLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MTM2OCwibWF4IjpbNzQuOTg3ODk5NzgwMjczNDQsLTguMzk5OTk5NjE4NTMwMjczLDU2LjE4NzQzODk2NDg0Mzc1XSwibWluIjpbLTc0Ljk4NzU0MTE5ODczMDQ3LC0xNTIuODAwMDAzMDUxNzU3OCwtNTYuMTg3NDM4OTY0ODQzNzVdLCJ0eXBlIjoiVkVDMyJ9XSwiYXNzZXQiOnsidmVyc2lvbiI6IjIuMCJ9LCJidWZmZXJWaWV3cyI6W3siYnVmZmVyIjowLCJieXRlTGVuZ3RoIjo4NjQsInRhcmdldCI6MzQ5NjJ9LHsiYnVmZmVyIjowLCJieXRlTGVuZ3RoIjoxNjQxNiwiYnl0ZU9mZnNldCI6ODY0LCJ0YXJnZXQiOjM0OTYyfV0sImJ1ZmZlcnMiOlt7ImJ5dGVMZW5ndGgiOjE3MjgwfV0sIm1hdGVyaWFscyI6W3siZG91YmxlU2lkZWQiOnRydWUsIm5hbWUiOiJDaXR5RW5naW5lTWF0ZXJpYWwiLCJwYnJNZXRhbGxpY1JvdWdobmVzcyI6eyJiYXNlQ29sb3JGYWN0b3IiOlswLjIxOTUxOTcxOTQ4MTQ2ODIsMC40NzA0NDAyMzg3MTQyMTgxNCwxLjAsMS4wXSwibWV0YWxsaWNGYWN0b3IiOjAuMH19LHsiZG91YmxlU2lkZWQiOnRydWUsIm5hbWUiOiJDaXR5RW5naW5lTWF0ZXJpYWxfMSIsInBick1ldGFsbGljUm91Z2huZXNzIjp7ImJhc2VDb2xvckZhY3RvciI6WzAuNDQyMzIyOTM5NjM0MzIzMSwwLjY3MzA0OTA5MjI5Mjc4NTYsMS4wLDEuMF0sIm1ldGFsbGljRmFjdG9yIjowLjB9fV0sIm1lc2hlcyI6W3sibmFtZSI6Im1lc2hfQ2l0eUVuZ2luZU1hdGVyaWFsIiwicHJpbWl0aXZlcyI6W3siYXR0cmlidXRlcyI6eyJQT1NJVElPTiI6MH0sIm1hdGVyaWFsIjowfV19LHsibmFtZSI6Im1lc2hfQ2l0eUVuZ2luZU1hdGVyaWFsXzEiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjoxfSwibWF0ZXJpYWwiOjF9XX1dLCJub2RlcyI6W3siY2hpbGRyZW4iOlsxXX0seyJtZXNoIjowfSx7ImNoaWxkcmVuIjpbM119LHsibWVzaCI6MX1dLCJzY2VuZSI6MCwic2NlbmVzIjpbeyJub2RlcyI6WzAsMl19XX0ggEMAAEJJTgDO+ZVCJ854oh+/YMKA+ZXCAAAAI/C/YMKf+ZXCEf//IR+/YELO+ZVCJ854oh+/YMKf+ZXCEf//IR+/YEJR+ZVCTTIHIvC/YEKA+ZXCMzOTwPC/YMLO+ZVCMzOTwB+/YMJR+ZVCMzOTwPC/YEKA+ZXCMzOTwPC/YMJR+ZVCMzOTwPC/YEKf+ZXCMzOTwB+/YEKA+ZXCAAAAI/C/YMLO+ZVCJ854oh+/YMLO+ZVCMzOTwB+/YMKA+ZXCAAAAI/C/YMLO+ZVCMzOTwB+/YMKA+ZXCMzOTwPC/YMLO+ZVCJ854oh+/YMJR+ZVCTTIHIvC/YEJR+ZVCMzOTwPC/YELO+ZVCJ854oh+/YMJR+ZVCMzOTwPC/YELO+ZVCMzOTwB+/YMJR+ZVCTTIHIvC/YEKf+ZXCEf//IR+/YEKf+ZXCMzOTwB+/YEJR+ZVCTTIHIvC/YEKf+ZXCMzOTwB+/YEJR+ZVCMzOTwPC/YEKf+ZXCEf//IR+/YEKA+ZXCAAAAI/C/YMKA+ZXCMzOTwPC/YMKf+ZXCEf//IR+/YEKA+ZXCMzOTwPC/YMKf+ZXCMzOTwB+/YELO+ZVCMzOTwB+/YMKA+ZXCMzOTwPC/YMKf+ZXCMzOTwB+/YELO+ZVCMzOTwB+/YMKf+ZXCMzOTwB+/YEJR+ZVCMzOTwPC/YEKA+ZXCZmYGwfC/YMLO+ZVCZmYGwR+/YMJR+ZVCZmYGwfC/YEKA+ZXCZmYGwfC/YMJR+ZVCZmYGwfC/YEKf+ZXCZmYGwR+/YEKA+ZXCMzOTwPC/YMLO+ZVCMzOTwB+/YMLO+ZVCZmYGwR+/YMKA+ZXCMzOTwPC/YMLO+ZVCZmYGwR+/YMKA+ZXCZmYGwfC/YMLO+ZVCMzOTwB+/YMJR+ZVCMzOTwPC/YEJR+ZVCZmYGwfC/YELO+ZVCMzOTwB+/YMJR+ZVCZmYGwfC/YELO+ZVCZmYGwR+/YMJR+ZVCMzOTwPC/YEKf+ZXCMzOTwB+/YEKf+ZXCZmYGwR+/YEJR+ZVCMzOTwPC/YEKf+ZXCZmYGwR+/YEJR+ZVCZmYGwfC/YEKf+ZXCMzOTwB+/YEKA+ZXCMzOTwPC/YMKA+ZXCZmYGwfC/YMKf+ZXCMzOTwB+/YEKA+ZXCZmYGwfC/YMKf+ZXCZmYGwR+/YELO+ZVCZmYGwR+/YMKA+ZXCZmYGwfC/YMKf+ZXCZmYGwR+/YELO+ZVCZmYGwR+/YMKf+ZXCZmYGwR+/YEJR+ZVCZmYGwfC/YEKA+ZXCMzNDwfC/YMLO+ZVCMzNDwR+/YMJR+ZVCMzNDwfC/YEKA+ZXCMzNDwfC/YMJR+ZVCMzNDwfC/YEKf+ZXCMzNDwR+/YEKA+ZXCZmYGwfC/YMLO+ZVCZmYGwR+/YMLO+ZVCMzNDwR+/YMKA+ZXCZmYGwfC/YMLO+ZVCMzNDwR+/YMKA+ZXCMzNDwfC/YMLO+ZVCZmYGwR+/YMJR+ZVCZmYGwfC/YEJR+ZVCMzNDwfC/YELO+ZVCZmYGwR+/YMJR+ZVCMzNDwfC/YELO+ZVCMzNDwR+/YMJR+ZVCZmYGwfC/YEKf+ZXCZmYGwR+/YEKf+ZXCMzNDwR+/YEJR+ZVCZmYGwfC/YEKf+ZXCMzNDwR+/YEJR+ZVCMzNDwfC/YEKf+ZXCZmYGwR+/YEKA+ZXCZmYGwfC/YMKA+ZXCMzNDwfC/YMKf+ZXCZmYGwR+/YEKA+ZXCMzNDwfC/YMKf+ZXCMzNDwR+/YELO+ZVCMzNDwR+/YMKA+ZXCMzNDwfC/YMKf+ZXCMzNDwR+/YELO+ZVCMzNDwR+/YMKf+ZXCMzNDwR+/YEJR+ZVCMzNDwfC/YEKA+ZXCAACAwfC/YMLO+ZVCAACAwR+/YMJR+ZVCAACAwfC/YEKA+ZXCAACAwfC/YMJR+ZVCAACAwfC/YEKf+ZXCAACAwR+/YEKA+ZXCMzNDwfC/YMLO+ZVCMzNDwR+/YMLO+ZVCAACAwR+/YMKA+ZXCMzNDwfC/YMLO+ZVCAACAwR+/YMKA+ZXCAACAwfC/YMLO+ZVCMzNDwR+/YMJR+ZVCMzNDwfC/YEJR+ZVCAACAwfC/YELO+ZVCMzNDwR+/YMJR+ZVCAACAwfC/YELO+ZVCAACAwR+/YMJR+ZVCMzNDwfC/YEKf+ZXCMzNDwR+/YEKf+ZXCAACAwR+/YEJR+ZVCMzNDwfC/YEKf+ZXCAACAwR+/YEJR+ZVCAACAwfC/YEKf+ZXCMzNDwR+/YEKA+ZXCMzNDwfC/YMKA+ZXCAACAwfC/YMKf+ZXCMzNDwR+/YEKA+ZXCAACAwfC/YMKf+ZXCAACAwR+/YELO+ZVCAACAwR+/YMKA+ZXCAACAwfC/YMKf+ZXCAACAwR+/YELO+ZVCAACAwR+/YMKf+ZXCAACAwR+/YEJR+ZVCAACAwfC/YEKA+ZXCZmaewfC/YMLO+ZVCZmaewR+/YMJR+ZVCZmaewfC/YEKA+ZXCZmaewfC/YMJR+ZVCZmaewfC/YEKf+ZXCZmaewR+/YEKA+ZXCAACAwfC/YMLO+ZVCAACAwR+/YMLO+ZVCZmaewR+/YMKA+ZXCAACAwfC/YMLO+ZVCZmaewR+/YMKA+ZXCZmaewfC/YMLO+ZVCAACAwR+/YMJR+ZVCAACAwfC/YEJR+ZVCZmaewfC/YELO+ZVCAACAwR+/YMJR+ZVCZmaewfC/YELO+ZVCZmaewR+/YMJR+ZVCAACAwfC/YEKf+ZXCAACAwR+/YEKf+ZXCZmaewR+/YEJR+ZVCAACAwfC/YEKf+ZXCZmaewR+/YEJR+ZVCZmaewfC/YEKf+ZXCAACAwR+/YEKA+ZXCAACAwfC/YMKA+ZXCZmaewfC/YMKf+ZXCAACAwR+/YEKA+ZXCZmaewfC/YMKf+ZXCZmaewR+/YELO+ZVCZmaewR+/YMKA+ZXCZmaewfC/YMKf+ZXCZmaewR+/YELO+ZVCZmaewR+/YMKf+ZXCZmaewR+/YEJR+ZVCZmaewfC/YEKA+ZXCzcy8wfC/YMLO+ZVCzcy8wR+/YMJR+ZVCzcy8wfC/YEKA+ZXCzcy8wfC/YMJR+ZVCzcy8wfC/YEKf+ZXCzcy8wR+/YEKA+ZXCZmaewfC/YMLO+ZVCZmaewR+/YMLO+ZVCzcy8wR+/YMKA+ZXCZmaewfC/YMLO+ZVCzcy8wR+/YMKA+ZXCzcy8wfC/YMLO+ZVCZmaewR+/YMJR+ZVCZmaewfC/YEJR+ZVCzcy8wfC/YELO+ZVCZmaewR+/YMJR+ZVCzcy8wfC/YELO+ZVCzcy8wR+/YMJR+ZVCZmaewfC/YEKf+ZXCZmaewR+/YEKf+ZXCzcy8wR+/YEJR+ZVCZmaewfC/YEKf+ZXCzcy8wR+/YEJR+ZVCzcy8wfC/YEKf+ZXCZmaewR+/YEKA+ZXCZmaewfC/YMKA+ZXCzcy8wfC/YMKf+ZXCZmaewR+/YEKA+ZXCzcy8wfC/YMKf+ZXCzcy8wR+/YELO+ZVCzcy8wR+/YMKA+ZXCzcy8wfC/YMKf+ZXCzcy8wR+/YELO+ZVCzcy8wR+/YMKf+ZXCzcy8wR+/YEJR+ZVCzcy8wfC/YEKA+ZXCMzPbwfC/YMLO+ZVCMzPbwR+/YMJR+ZVCMzPbwfC/YEKA+ZXCMzPbwfC/YMJR+ZVCMzPbwfC/YEKf+ZXCMzPbwR+/YEKA+ZXCzcy8wfC/YMLO+ZVCzcy8wR+/YMLO+ZVCMzPbwR+/YMKA+ZXCzcy8wfC/YMLO+ZVCMzPbwR+/YMKA+ZXCMzPbwfC/YMLO+ZVCzcy8wR+/YMJR+ZVCzcy8wfC/YEJR+ZVCMzPbwfC/YELO+ZVCzcy8wR+/YMJR+ZVCMzPbwfC/YELO+ZVCMzPbwR+/YMJR+ZVCzcy8wfC/YEKf+ZXCzcy8wR+/YEKf+ZXCMzPbwR+/YEJR+ZVCzcy8wfC/YEKf+ZXCMzPbwR+/YEJR+ZVCMzPbwfC/YEKf+ZXCzcy8wR+/YEKA+ZXCzcy8wfC/YMKA+ZXCMzPbwfC/YMKf+ZXCzcy8wR+/YEKA+ZXCMzPbwfC/YMKf+ZXCMzPbwR+/YELO+ZVCMzPbwR+/YMKA+ZXCMzPbwfC/YMKf+ZXCMzPbwR+/YELO+ZVCMzPbwR+/YMKf+ZXCMzPbwR+/YEJR+ZVCMzPbwfC/YEKA+ZXCmpn5wfC/YMLO+ZVCmpn5wR+/YMJR+ZVCmpn5wfC/YEKA+ZXCmpn5wfC/YMJR+ZVCmpn5wfC/YEKf+ZXCmpn5wR+/YEKA+ZXCMzPbwfC/YMLO+ZVCMzPbwR+/YMLO+ZVCmpn5wR+/YMKA+ZXCMzPbwfC/YMLO+ZVCmpn5wR+/YMKA+ZXCmpn5wfC/YMLO+ZVCMzPbwR+/YMJR+ZVCMzPbwfC/YEJR+ZVCmpn5wfC/YELO+ZVCMzPbwR+/YMJR+ZVCmpn5wfC/YELO+ZVCmpn5wR+/YMJR+ZVCMzPbwfC/YEKf+ZXCMzPbwR+/YEKf+ZXCmpn5wR+/YEJR+ZVCMzPbwfC/YEKf+ZXCmpn5wR+/YEJR+ZVCmpn5wfC/YEKf+ZXCMzPbwR+/YEKA+ZXCMzPbwfC/YMKA+ZXCmpn5wfC/YMKf+ZXCMzPbwR+/YEKA+ZXCmpn5wfC/YMKf+ZXCmpn5wR+/YELO+ZVCmpn5wR+/YMKA+ZXCmpn5wfC/YMKf+ZXCmpn5wR+/YELO+ZVCmpn5wR+/YMKf+ZXCmpn5wR+/YEJR+ZVCmpn5wfC/YEKA+ZXCAAAMwvC/YMLO+ZVCAAAMwh+/YMJR+ZVCAAAMwvC/YEKA+ZXCAAAMwvC/YMJR+ZVCAAAMwvC/YEKf+ZXCAAAMwh+/YEKA+ZXCmpn5wfC/YMLO+ZVCmpn5wR+/YMLO+ZVCAAAMwh+/YMKA+ZXCmpn5wfC/YMLO+ZVCAAAMwh+/YMKA+ZXCAAAMwvC/YMLO+ZVCmpn5wR+/YMJR+ZVCmpn5wfC/YEJR+ZVCAAAMwvC/YELO+ZVCmpn5wR+/YMJR+ZVCAAAMwvC/YELO+ZVCAAAMwh+/YMJR+ZVCmpn5wfC/YEKf+ZXCmpn5wR+/YEKf+ZXCAAAMwh+/YEJR+ZVCmpn5wfC/YEKf+ZXCAAAMwh+/YEJR+ZVCAAAMwvC/YEKf+ZXCmpn5wR+/YEKA+ZXCmpn5wfC/YMKA+ZXCAAAMwvC/YMKf+ZXCmpn5wR+/YEKA+ZXCAAAMwvC/YMKf+ZXCAAAMwh+/YELO+ZVCAAAMwh+/YMKA+ZXCAAAMwvC/YMKf+ZXCAAAMwh+/YELO+ZVCAAAMwh+/YMKf+ZXCAAAMwh+/YEJR+ZVCAAAMwvC/YEKA+ZXCMzMbwvC/YMLO+ZVCMzMbwh+/YMJR+ZVCMzMbwvC/YEKA+ZXCMzMbwvC/YMJR+ZVCMzMbwvC/YEKf+ZXCMzMbwh+/YEKA+ZXCAAAMwvC/YMLO+ZVCAAAMwh+/YMLO+ZVCMzMbwh+/YMKA+ZXCAAAMwvC/YMLO+ZVCMzMbwh+/YMKA+ZXCMzMbwvC/YMLO+ZVCAAAMwh+/YMJR+ZVCAAAMwvC/YEJR+ZVCMzMbwvC/YELO+ZVCAAAMwh+/YMJR+ZVCMzMbwvC/YELO+ZVCMzMbwh+/YMJR+ZVCAAAMwvC/YEKf+ZXCAAAMwh+/YEKf+ZXCMzMbwh+/YEJR+ZVCAAAMwvC/YEKf+ZXCMzMbwh+/YEJR+ZVCMzMbwvC/YEKf+ZXCAAAMwh+/YEKA+ZXCAAAMwvC/YMKA+ZXCMzMbwvC/YMKf+ZXCAAAMwh+/YEKA+ZXCMzMbwvC/YMKf+ZXCMzMbwh+/YELO+ZVCMzMbwh+/YMKA+ZXCMzMbwvC/YMKf+ZXCMzMbwh+/YELO+ZVCMzMbwh+/YMKf+ZXCMzMbwh+/YEJR+ZVCMzMbwvC/YEKA+ZXCZmYqwvC/YMLO+ZVCZmYqwh+/YMJR+ZVCZmYqwvC/YEKA+ZXCZmYqwvC/YMJR+ZVCZmYqwvC/YEKf+ZXCZmYqwh+/YEKA+ZXCMzMbwvC/YMLO+ZVCMzMbwh+/YMLO+ZVCZmYqwh+/YMKA+ZXCMzMbwvC/YMLO+ZVCZmYqwh+/YMKA+ZXCZmYqwvC/YMLO+ZVCMzMbwh+/YMJR+ZVCMzMbwvC/YEJR+ZVCZmYqwvC/YELO+ZVCMzMbwh+/YMJR+ZVCZmYqwvC/YELO+ZVCZmYqwh+/YMJR+ZVCMzMbwvC/YEKf+ZXCMzMbwh+/YEKf+ZXCZmYqwh+/YEJR+ZVCMzMbwvC/YEKf+ZXCZmYqwh+/YEJR+ZVCZmYqwvC/YEKf+ZXCMzMbwh+/YEKA+ZXCMzMbwvC/YMKA+ZXCZmYqwvC/YMKf+ZXCMzMbwh+/YEKA+ZXCZmYqwvC/YMKf+ZXCZmYqwh+/YELO+ZVCZmYqwh+/YMKA+ZXCZmYqwvC/YMKf+ZXCZmYqwh+/YELO+ZVCZmYqwh+/YMKf+ZXCZmYqwh+/YEJR+ZVCZmYqwvC/YEKA+ZXCmpk5wvC/YMLO+ZVCmpk5wh+/YMJR+ZVCmpk5wvC/YEKA+ZXCmpk5wvC/YMJR+ZVCmpk5wvC/YEKf+ZXCmpk5wh+/YEKA+ZXCZmYqwvC/YMLO+ZVCZmYqwh+/YMLO+ZVCmpk5wh+/YMKA+ZXCZmYqwvC/YMLO+ZVCmpk5wh+/YMKA+ZXCmpk5wvC/YMLO+ZVCZmYqwh+/YMJR+ZVCZmYqwvC/YEJR+ZVCmpk5wvC/YELO+ZVCZmYqwh+/YMJR+ZVCmpk5wvC/YELO+ZVCmpk5wh+/YMJR+ZVCZmYqwvC/YEKf+ZXCZmYqwh+/YEKf+ZXCmpk5wh+/YEJR+ZVCZmYqwvC/YEKf+ZXCmpk5wh+/YEJR+ZVCmpk5wvC/YEKf+ZXCZmYqwh+/YEKA+ZXCZmYqwvC/YMKA+ZXCmpk5wvC/YMKf+ZXCZmYqwh+/YEKA+ZXCmpk5wvC/YMKf+ZXCmpk5wh+/YELO+ZVCmpk5wh+/YMKA+ZXCmpk5wvC/YMKf+ZXCmpk5wh+/YELO+ZVCmpk5wh+/YMKf+ZXCmpk5wh+/YEJR+ZVCmpk5wvC/YEKA+ZXCzcxIwvC/YMLO+ZVCzcxIwh+/YMJR+ZVCzcxIwvC/YEKA+ZXCzcxIwvC/YMJR+ZVCzcxIwvC/YEKf+ZXCzcxIwh+/YEKA+ZXCmpk5wvC/YMLO+ZVCmpk5wh+/YMLO+ZVCzcxIwh+/YMKA+ZXCmpk5wvC/YMLO+ZVCzcxIwh+/YMKA+ZXCzcxIwvC/YMLO+ZVCmpk5wh+/YMJR+ZVCmpk5wvC/YEJR+ZVCzcxIwvC/YELO+ZVCmpk5wh+/YMJR+ZVCzcxIwvC/YELO+ZVCzcxIwh+/YMJR+ZVCmpk5wvC/YEKf+ZXCmpk5wh+/YEKf+ZXCzcxIwh+/YEJR+ZVCmpk5wvC/YEKf+ZXCzcxIwh+/YEJR+ZVCzcxIwvC/YEKf+ZXCmpk5wh+/YEKA+ZXCmpk5wvC/YMKA+ZXCzcxIwvC/YMKf+ZXCmpk5wh+/YEKA+ZXCzcxIwvC/YMKf+ZXCzcxIwh+/YELO+ZVCzcxIwh+/YMKA+ZXCzcxIwvC/YMKf+ZXCzcxIwh+/YELO+ZVCzcxIwh+/YMKf+ZXCzcxIwh+/YEJR+ZVCzcxIwvC/YEKA+ZXCAABYwvC/YMLO+ZVCAABYwh+/YMJR+ZVCAABYwvC/YEKA+ZXCAABYwvC/YMJR+ZVCAABYwvC/YEKf+ZXCAABYwh+/YEKA+ZXCzcxIwvC/YMLO+ZVCzcxIwh+/YMLO+ZVCAABYwh+/YMKA+ZXCzcxIwvC/YMLO+ZVCAABYwh+/YMKA+ZXCAABYwvC/YMLO+ZVCzcxIwh+/YMJR+ZVCzcxIwvC/YEJR+ZVCAABYwvC/YELO+ZVCzcxIwh+/YMJR+ZVCAABYwvC/YELO+ZVCAABYwh+/YMJR+ZVCzcxIwvC/YEKf+ZXCzcxIwh+/YEKf+ZXCAABYwh+/YEJR+ZVCzcxIwvC/YEKf+ZXCAABYwh+/YEJR+ZVCAABYwvC/YEKf+ZXCzcxIwh+/YEKA+ZXCzcxIwvC/YMKA+ZXCAABYwvC/YMKf+ZXCzcxIwh+/YEKA+ZXCAABYwvC/YMKf+ZXCAABYwh+/YELO+ZVCAABYwh+/YMKA+ZXCAABYwvC/YMKf+ZXCAABYwh+/YELO+ZVCAABYwh+/YMKf+ZXCAABYwh+/YEJR+ZVCAABYwvC/YEKA+ZXCMzNnwvC/YMLO+ZVCMzNnwh+/YMJR+ZVCMzNnwvC/YEKA+ZXCMzNnwvC/YMJR+ZVCMzNnwvC/YEKf+ZXCMzNnwh+/YEKA+ZXCAABYwvC/YMLO+ZVCAABYwh+/YMLO+ZVCMzNnwh+/YMKA+ZXCAABYwvC/YMLO+ZVCMzNnwh+/YMKA+ZXCMzNnwvC/YMLO+ZVCAABYwh+/YMJR+ZVCAABYwvC/YEJR+ZVCMzNnwvC/YELO+ZVCAABYwh+/YMJR+ZVCMzNnwvC/YELO+ZVCMzNnwh+/YMJR+ZVCAABYwvC/YEKf+ZXCAABYwh+/YEKf+ZXCMzNnwh+/YEJR+ZVCAABYwvC/YEKf+ZXCMzNnwh+/YEJR+ZVCMzNnwvC/YEKf+ZXCAABYwh+/YEKA+ZXCAABYwvC/YMKA+ZXCMzNnwvC/YMKf+ZXCAABYwh+/YEKA+ZXCMzNnwvC/YMKf+ZXCMzNnwh+/YELO+ZVCMzNnwh+/YMKA+ZXCMzNnwvC/YMKf+ZXCMzNnwh+/YELO+ZVCMzNnwh+/YMKf+ZXCMzNnwh+/YEJR+ZVCMzNnwvC/YEKA+ZXCZmZ2wvC/YMLO+ZVCZmZ2wh+/YMJR+ZVCZmZ2wvC/YEKA+ZXCZmZ2wvC/YMJR+ZVCZmZ2wvC/YEKf+ZXCZmZ2wh+/YEKA+ZXCMzNnwvC/YMLO+ZVCMzNnwh+/YMLO+ZVCZmZ2wh+/YMKA+ZXCMzNnwvC/YMLO+ZVCZmZ2wh+/YMKA+ZXCZmZ2wvC/YMLO+ZVCMzNnwh+/YMJR+ZVCMzNnwvC/YEJR+ZVCZmZ2wvC/YELO+ZVCMzNnwh+/YMJR+ZVCZmZ2wvC/YELO+ZVCZmZ2wh+/YMJR+ZVCMzNnwvC/YEKf+ZXCMzNnwh+/YEKf+ZXCZmZ2wh+/YEJR+ZVCMzNnwvC/YEKf+ZXCZmZ2wh+/YEJR+ZVCZmZ2wvC/YEKf+ZXCMzNnwh+/YEKA+ZXCMzNnwvC/YMKA+ZXCZmZ2wvC/YMKf+ZXCMzNnwh+/YEKA+ZXCZmZ2wvC/YMKf+ZXCZmZ2wh+/YELO+ZVCZmZ2wh+/YMKA+ZXCZmZ2wvC/YMKf+ZXCZmZ2wh+/YELO+ZVCZmZ2wh+/YMKf+ZXCZmZ2wh+/YEJR+ZVCZmZ2wvC/YEKA+ZXCzcyCwvC/YMLO+ZVCzcyCwh+/YMJR+ZVCzcyCwvC/YEKA+ZXCzcyCwvC/YMJR+ZVCzcyCwvC/YEKf+ZXCzcyCwh+/YEKA+ZXCZmZ2wvC/YMLO+ZVCZmZ2wh+/YMLO+ZVCzcyCwh+/YMKA+ZXCZmZ2wvC/YMLO+ZVCzcyCwh+/YMKA+ZXCzcyCwvC/YMLO+ZVCZmZ2wh+/YMJR+ZVCZmZ2wvC/YEJR+ZVCzcyCwvC/YELO+ZVCZmZ2wh+/YMJR+ZVCzcyCwvC/YELO+ZVCzcyCwh+/YMJR+ZVCZmZ2wvC/YEKf+ZXCZmZ2wh+/YEKf+ZXCzcyCwh+/YEJR+ZVCZmZ2wvC/YEKf+ZXCzcyCwh+/YEJR+ZVCzcyCwvC/YEKf+ZXCZmZ2wh+/YEKA+ZXCZmZ2wvC/YMKA+ZXCzcyCwvC/YMKf+ZXCZmZ2wh+/YEKA+ZXCzcyCwvC/YMKf+ZXCzcyCwh+/YELO+ZVCzcyCwh+/YMKA+ZXCzcyCwvC/YMKf+ZXCzcyCwh+/YELO+ZVCzcyCwh+/YMKf+ZXCzcyCwh+/YEJR+ZVCzcyCwvC/YEKA+ZXCZmaKwvC/YMLO+ZVCZmaKwh+/YMJR+ZVCZmaKwvC/YEKA+ZXCZmaKwvC/YMJR+ZVCZmaKwvC/YEKf+ZXCZmaKwh+/YEKA+ZXCzcyCwvC/YMLO+ZVCzcyCwh+/YMLO+ZVCZmaKwh+/YMKA+ZXCzcyCwvC/YMLO+ZVCZmaKwh+/YMKA+ZXCZmaKwvC/YMLO+ZVCzcyCwh+/YMJR+ZVCzcyCwvC/YEJR+ZVCZmaKwvC/YELO+ZVCzcyCwh+/YMJR+ZVCZmaKwvC/YELO+ZVCZmaKwh+/YMJR+ZVCzcyCwvC/YEKf+ZXCzcyCwh+/YEKf+ZXCZmaKwh+/YEJR+ZVCzcyCwvC/YEKf+ZXCZmaKwh+/YEJR+ZVCZmaKwvC/YEKf+ZXCzcyCwh+/YEKA+ZXCzcyCwvC/YMKA+ZXCZmaKwvC/YMKf+ZXCzcyCwh+/YEKA+ZXCZmaKwvC/YMKf+ZXCZmaKwh+/YELO+ZVCZmaKwh+/YMKA+ZXCZmaKwvC/YMKf+ZXCZmaKwh+/YELO+ZVCZmaKwh+/YMKf+ZXCZmaKwh+/YEJR+ZVCZmaKwvC/YEKA+ZXCAACSwvC/YMLO+ZVCAACSwh+/YMJR+ZVCAACSwvC/YEKA+ZXCAACSwvC/YMJR+ZVCAACSwvC/YEKf+ZXCAACSwh+/YEKA+ZXCZmaKwvC/YMLO+ZVCZmaKwh+/YMLO+ZVCAACSwh+/YMKA+ZXCZmaKwvC/YMLO+ZVCAACSwh+/YMKA+ZXCAACSwvC/YMLO+ZVCZmaKwh+/YMJR+ZVCZmaKwvC/YEJR+ZVCAACSwvC/YELO+ZVCZmaKwh+/YMJR+ZVCAACSwvC/YELO+ZVCAACSwh+/YMJR+ZVCZmaKwvC/YEKf+ZXCZmaKwh+/YEKf+ZXCAACSwh+/YEJR+ZVCZmaKwvC/YEKf+ZXCAACSwh+/YEJR+ZVCAACSwvC/YEKf+ZXCZmaKwh+/YEKA+ZXCZmaKwvC/YMKA+ZXCAACSwvC/YMKf+ZXCZmaKwh+/YEKA+ZXCAACSwvC/YMKf+ZXCAACSwh+/YELO+ZVCAACSwh+/YMKA+ZXCAACSwvC/YMKf+ZXCAACSwh+/YELO+ZVCAACSwh+/YMKf+ZXCAACSwh+/YEJR+ZVCAACSwvC/YEKA+ZXCmpmZwvC/YMLO+ZVCmpmZwh+/YMJR+ZVCmpmZwvC/YEKA+ZXCmpmZwvC/YMJR+ZVCmpmZwvC/YEKf+ZXCmpmZwh+/YEKA+ZXCAACSwvC/YMLO+ZVCAACSwh+/YMLO+ZVCmpmZwh+/YMKA+ZXCAACSwvC/YMLO+ZVCmpmZwh+/YMKA+ZXCmpmZwvC/YMLO+ZVCAACSwh+/YMJR+ZVCAACSwvC/YEJR+ZVCmpmZwvC/YELO+ZVCAACSwh+/YMJR+ZVCmpmZwvC/YELO+ZVCmpmZwh+/YMJR+ZVCAACSwvC/YEKf+ZXCAACSwh+/YEKf+ZXCmpmZwh+/YEJR+ZVCAACSwvC/YEKf+ZXCmpmZwh+/YEJR+ZVCmpmZwvC/YEKf+ZXCAACSwh+/YEKA+ZXCAACSwvC/YMKA+ZXCmpmZwvC/YMKf+ZXCAACSwh+/YEKA+ZXCmpmZwvC/YMKf+ZXCmpmZwh+/YELO+ZVCmpmZwh+/YMKA+ZXCmpmZwvC/YMKf+ZXCmpmZwh+/YELO+ZVCmpmZwh+/YMKf+ZXCmpmZwh+/YEJR+ZVCmpmZwvC/YEKA+ZXCMzOhwvC/YMLO+ZVCMzOhwh+/YMJR+ZVCMzOhwvC/YEKA+ZXCMzOhwvC/YMJR+ZVCMzOhwvC/YEKf+ZXCMzOhwh+/YEKA+ZXCmpmZwvC/YMLO+ZVCmpmZwh+/YMLO+ZVCMzOhwh+/YMKA+ZXCmpmZwvC/YMLO+ZVCMzOhwh+/YMKA+ZXCMzOhwvC/YMLO+ZVCmpmZwh+/YMJR+ZVCmpmZwvC/YEJR+ZVCMzOhwvC/YELO+ZVCmpmZwh+/YMJR+ZVCMzOhwvC/YELO+ZVCMzOhwh+/YMJR+ZVCmpmZwvC/YEKf+ZXCmpmZwh+/YEKf+ZXCMzOhwh+/YEJR+ZVCmpmZwvC/YEKf+ZXCMzOhwh+/YEJR+ZVCMzOhwvC/YEKf+ZXCmpmZwh+/YEKA+ZXCmpmZwvC/YMKA+ZXCMzOhwvC/YMKf+ZXCmpmZwh+/YEKA+ZXCMzOhwvC/YMKf+ZXCMzOhwh+/YELO+ZVCMzOhwh+/YMKA+ZXCMzOhwvC/YMKf+ZXCMzOhwh+/YELO+ZVCMzOhwh+/YMKf+ZXCMzOhwh+/YEJR+ZVCMzOhwvC/YEKA+ZXCzcyowvC/YMLO+ZVCzcyowh+/YMJR+ZVCzcyowvC/YEKA+ZXCzcyowvC/YMJR+ZVCzcyowvC/YEKf+ZXCzcyowh+/YEKA+ZXCMzOhwvC/YMLO+ZVCMzOhwh+/YMLO+ZVCzcyowh+/YMKA+ZXCMzOhwvC/YMLO+ZVCzcyowh+/YMKA+ZXCzcyowvC/YMLO+ZVCMzOhwh+/YMJR+ZVCMzOhwvC/YEJR+ZVCzcyowvC/YELO+ZVCMzOhwh+/YMJR+ZVCzcyowvC/YELO+ZVCzcyowh+/YMJR+ZVCMzOhwvC/YEKf+ZXCMzOhwh+/YEKf+ZXCzcyowh+/YEJR+ZVCMzOhwvC/YEKf+ZXCzcyowh+/YEJR+ZVCzcyowvC/YEKf+ZXCMzOhwh+/YEKA+ZXCMzOhwvC/YMKA+ZXCzcyowvC/YMKf+ZXCMzOhwh+/YEKA+ZXCzcyowvC/YMKf+ZXCzcyowh+/YELO+ZVCzcyowh+/YMKA+ZXCzcyowvC/YMKf+ZXCzcyowh+/YELO+ZVCzcyowh+/YMKf+ZXCzcyowh+/YEJR+ZVCzcyowvC/YEKA+ZXCZmawwvC/YMLO+ZVCZmawwh+/YMJR+ZVCZmawwvC/YEKA+ZXCZmawwvC/YMJR+ZVCZmawwvC/YEKf+ZXCZmawwh+/YEKA+ZXCzcyowvC/YMLO+ZVCzcyowh+/YMLO+ZVCZmawwh+/YMKA+ZXCzcyowvC/YMLO+ZVCZmawwh+/YMKA+ZXCZmawwvC/YMLO+ZVCzcyowh+/YMJR+ZVCzcyowvC/YEJR+ZVCZmawwvC/YELO+ZVCzcyowh+/YMJR+ZVCZmawwvC/YELO+ZVCZmawwh+/YMJR+ZVCzcyowvC/YEKf+ZXCzcyowh+/YEKf+ZXCZmawwh+/YEJR+ZVCzcyowvC/YEKf+ZXCZmawwh+/YEJR+ZVCZmawwvC/YEKf+ZXCzcyowh+/YEKA+ZXCzcyowvC/YMKA+ZXCZmawwvC/YMKf+ZXCzcyowh+/YEKA+ZXCZmawwvC/YMKf+ZXCZmawwh+/YELO+ZVCZmawwh+/YMKA+ZXCZmawwvC/YMKf+ZXCZmawwh+/YELO+ZVCZmawwh+/YMKf+ZXCZmawwh+/YEJR+ZVCZmawwvC/YEKA+ZXCAAC4wvC/YMLO+ZVCAAC4wh+/YMJR+ZVCAAC4wvC/YEKA+ZXCAAC4wvC/YMJR+ZVCAAC4wvC/YEKf+ZXCAAC4wh+/YEKA+ZXCZmawwvC/YMLO+ZVCZmawwh+/YMLO+ZVCAAC4wh+/YMKA+ZXCZmawwvC/YMLO+ZVCAAC4wh+/YMKA+ZXCAAC4wvC/YMLO+ZVCZmawwh+/YMJR+ZVCZmawwvC/YEJR+ZVCAAC4wvC/YELO+ZVCZmawwh+/YMJR+ZVCAAC4wvC/YELO+ZVCAAC4wh+/YMJR+ZVCZmawwvC/YEKf+ZXCZmawwh+/YEKf+ZXCAAC4wh+/YEJR+ZVCZmawwvC/YEKf+ZXCAAC4wh+/YEJR+ZVCAAC4wvC/YEKf+ZXCZmawwh+/YEKA+ZXCZmawwvC/YMKA+ZXCAAC4wvC/YMKf+ZXCZmawwh+/YEKA+ZXCAAC4wvC/YMKf+ZXCAAC4wh+/YELO+ZVCAAC4wh+/YMKA+ZXCAAC4wvC/YMKf+ZXCAAC4wh+/YELO+ZVCAAC4wh+/YMKf+ZXCAAC4wh+/YEJR+ZVCAAC4wvC/YEKA+ZXCmpm/wvC/YMLO+ZVCmpm/wh+/YMJR+ZVCmpm/wvC/YEKA+ZXCmpm/wvC/YMJR+ZVCmpm/wvC/YEKf+ZXCmpm/wh+/YEKA+ZXCAAC4wvC/YMLO+ZVCAAC4wh+/YMLO+ZVCmpm/wh+/YMKA+ZXCAAC4wvC/YMLO+ZVCmpm/wh+/YMKA+ZXCmpm/wvC/YMLO+ZVCAAC4wh+/YMJR+ZVCAAC4wvC/YEJR+ZVCmpm/wvC/YELO+ZVCAAC4wh+/YMJR+ZVCmpm/wvC/YELO+ZVCmpm/wh+/YMJR+ZVCAAC4wvC/YEKf+ZXCAAC4wh+/YEKf+ZXCmpm/wh+/YEJR+ZVCAAC4wvC/YEKf+ZXCmpm/wh+/YEJR+ZVCmpm/wvC/YEKf+ZXCAAC4wh+/YEKA+ZXCAAC4wvC/YMKA+ZXCmpm/wvC/YMKf+ZXCAAC4wh+/YEKA+ZXCmpm/wvC/YMKf+ZXCmpm/wh+/YELO+ZVCmpm/wh+/YMKA+ZXCmpm/wvC/YMKf+ZXCmpm/wh+/YELO+ZVCmpm/wh+/YMKf+ZXCmpm/wh+/YEJR+ZVCmpm/wvC/YEKA+ZXCMzPHwvC/YMLO+ZVCMzPHwh+/YMJR+ZVCMzPHwvC/YEKA+ZXCMzPHwvC/YMJR+ZVCMzPHwvC/YEKf+ZXCMzPHwh+/YEKA+ZXCmpm/wvC/YMLO+ZVCmpm/wh+/YMLO+ZVCMzPHwh+/YMKA+ZXCmpm/wvC/YMLO+ZVCMzPHwh+/YMKA+ZXCMzPHwvC/YMLO+ZVCmpm/wh+/YMJR+ZVCmpm/wvC/YEJR+ZVCMzPHwvC/YELO+ZVCmpm/wh+/YMJR+ZVCMzPHwvC/YELO+ZVCMzPHwh+/YMJR+ZVCmpm/wvC/YEKf+ZXCmpm/wh+/YEKf+ZXCMzPHwh+/YEJR+ZVCmpm/wvC/YEKf+ZXCMzPHwh+/YEJR+ZVCMzPHwvC/YEKf+ZXCmpm/wh+/YEKA+ZXCmpm/wvC/YMKA+ZXCMzPHwvC/YMKf+ZXCmpm/wh+/YEKA+ZXCMzPHwvC/YMKf+ZXCMzPHwh+/YELO+ZVCMzPHwh+/YMKA+ZXCMzPHwvC/YMKf+ZXCMzPHwh+/YELO+ZVCMzPHwh+/YMKf+ZXCMzPHwh+/YEJR+ZVCMzPHwvC/YEKA+ZXCzczOwvC/YMLO+ZVCzczOwh+/YMJR+ZVCzczOwvC/YEKA+ZXCzczOwvC/YMJR+ZVCzczOwvC/YEKf+ZXCzczOwh+/YEKA+ZXCMzPHwvC/YMLO+ZVCMzPHwh+/YMLO+ZVCzczOwh+/YMKA+ZXCMzPHwvC/YMLO+ZVCzczOwh+/YMKA+ZXCzczOwvC/YMLO+ZVCMzPHwh+/YMJR+ZVCMzPHwvC/YEJR+ZVCzczOwvC/YELO+ZVCMzPHwh+/YMJR+ZVCzczOwvC/YELO+ZVCzczOwh+/YMJR+ZVCMzPHwvC/YEKf+ZXCMzPHwh+/YEKf+ZXCzczOwh+/YEJR+ZVCMzPHwvC/YEKf+ZXCzczOwh+/YEJR+ZVCzczOwvC/YEKf+ZXCMzPHwh+/YEKA+ZXCMzPHwvC/YMKA+ZXCzczOwvC/YMKf+ZXCMzPHwh+/YEKA+ZXCzczOwvC/YMKf+ZXCzczOwh+/YELO+ZVCzczOwh+/YMKA+ZXCzczOwvC/YMKf+ZXCzczOwh+/YELO+ZVCzczOwh+/YMKf+ZXCzczOwh+/YEJR+ZVCzczOwvC/YEKA+ZXCZmbWwvC/YMLO+ZVCZmbWwh+/YMJR+ZVCZmbWwvC/YEKA+ZXCZmbWwvC/YMJR+ZVCZmbWwvC/YEKf+ZXCZmbWwh+/YEKA+ZXCzczOwvC/YMLO+ZVCzczOwh+/YMLO+ZVCZmbWwh+/YMKA+ZXCzczOwvC/YMLO+ZVCZmbWwh+/YMKA+ZXCZmbWwvC/YMLO+ZVCzczOwh+/YMJR+ZVCzczOwvC/YEJR+ZVCZmbWwvC/YELO+ZVCzczOwh+/YMJR+ZVCZmbWwvC/YELO+ZVCZmbWwh+/YMJR+ZVCzczOwvC/YEKf+ZXCzczOwh+/YEKf+ZXCZmbWwh+/YEJR+ZVCzczOwvC/YEKf+ZXCZmbWwh+/YEJR+ZVCZmbWwvC/YEKf+ZXCzczOwh+/YEKA+ZXCzczOwvC/YMKA+ZXCZmbWwvC/YMKf+ZXCzczOwh+/YEKA+ZXCZmbWwvC/YMKf+ZXCZmbWwh+/YELO+ZVCZmbWwh+/YMKA+ZXCZmbWwvC/YMKf+ZXCZmbWwh+/YELO+ZVCZmbWwh+/YMKf+ZXCZmbWwh+/YEJR+ZVCZmbWwvC/YEKA+ZXCAADewvC/YMLO+ZVCAADewh+/YMJR+ZVCAADewvC/YEKA+ZXCAADewvC/YMJR+ZVCAADewvC/YEKf+ZXCAADewh+/YEKA+ZXCZmbWwvC/YMLO+ZVCZmbWwh+/YMLO+ZVCAADewh+/YMKA+ZXCZmbWwvC/YMLO+ZVCAADewh+/YMKA+ZXCAADewvC/YMLO+ZVCZmbWwh+/YMJR+ZVCZmbWwvC/YEJR+ZVCAADewvC/YELO+ZVCZmbWwh+/YMJR+ZVCAADewvC/YELO+ZVCAADewh+/YMJR+ZVCZmbWwvC/YEKf+ZXCZmbWwh+/YEKf+ZXCAADewh+/YEJR+ZVCZmbWwvC/YEKf+ZXCAADewh+/YEJR+ZVCAADewvC/YEKf+ZXCZmbWwh+/YEKA+ZXCZmbWwvC/YMKA+ZXCAADewvC/YMKf+ZXCZmbWwh+/YEKA+ZXCAADewvC/YMKf+ZXCAADewh+/YELO+ZVCAADewh+/YMKA+ZXCAADewvC/YMKf+ZXCAADewh+/YELO+ZVCAADewh+/YMKf+ZXCAADewh+/YEJR+ZVCAADewvC/YEKA+ZXCmpnlwvC/YMLO+ZVCmpnlwh+/YMJR+ZVCmpnlwvC/YEKA+ZXCmpnlwvC/YMJR+ZVCmpnlwvC/YEKf+ZXCmpnlwh+/YEKA+ZXCAADewvC/YMLO+ZVCAADewh+/YMLO+ZVCmpnlwh+/YMKA+ZXCAADewvC/YMLO+ZVCmpnlwh+/YMKA+ZXCmpnlwvC/YMLO+ZVCAADewh+/YMJR+ZVCAADewvC/YEJR+ZVCmpnlwvC/YELO+ZVCAADewh+/YMJR+ZVCmpnlwvC/YELO+ZVCmpnlwh+/YMJR+ZVCAADewvC/YEKf+ZXCAADewh+/YEKf+ZXCmpnlwh+/YEJR+ZVCAADewvC/YEKf+ZXCmpnlwh+/YEJR+ZVCmpnlwvC/YEKf+ZXCAADewh+/YEKA+ZXCAADewvC/YMKA+ZXCmpnlwvC/YMKf+ZXCAADewh+/YEKA+ZXCmpnlwvC/YMKf+ZXCmpnlwh+/YELO+ZVCmpnlwh+/YMKA+ZXCmpnlwvC/YMKf+ZXCmpnlwh+/YELO+ZVCmpnlwh+/YMKf+ZXCmpnlwh+/YEJR+ZVCmpnlwvC/YEKA+ZXCMzPtwvC/YMLO+ZVCMzPtwh+/YMJR+ZVCMzPtwvC/YEKA+ZXCMzPtwvC/YMJR+ZVCMzPtwvC/YEKf+ZXCMzPtwh+/YEKA+ZXCmpnlwvC/YMLO+ZVCmpnlwh+/YMLO+ZVCMzPtwh+/YMKA+ZXCmpnlwvC/YMLO+ZVCMzPtwh+/YMKA+ZXCMzPtwvC/YMLO+ZVCmpnlwh+/YMJR+ZVCmpnlwvC/YEJR+ZVCMzPtwvC/YELO+ZVCmpnlwh+/YMJR+ZVCMzPtwvC/YELO+ZVCMzPtwh+/YMJR+ZVCmpnlwvC/YEKf+ZXCmpnlwh+/YEKf+ZXCMzPtwh+/YEJR+ZVCmpnlwvC/YEKf+ZXCMzPtwh+/YEJR+ZVCMzPtwvC/YEKf+ZXCmpnlwh+/YEKA+ZXCmpnlwvC/YMKA+ZXCMzPtwvC/YMKf+ZXCmpnlwh+/YEKA+ZXCMzPtwvC/YMKf+ZXCMzPtwh+/YELO+ZVCMzPtwh+/YMKA+ZXCMzPtwvC/YMKf+ZXCMzPtwh+/YELO+ZVCMzPtwh+/YMKf+ZXCMzPtwh+/YEJR+ZVCMzPtwvC/YEKA+ZXCzcz0wvC/YMLO+ZVCzcz0wh+/YMJR+ZVCzcz0wvC/YEKA+ZXCzcz0wvC/YMJR+ZVCzcz0wvC/YEKf+ZXCzcz0wh+/YEKA+ZXCMzPtwvC/YMLO+ZVCMzPtwh+/YMLO+ZVCzcz0wh+/YMKA+ZXCMzPtwvC/YMLO+ZVCzcz0wh+/YMKA+ZXCzcz0wvC/YMLO+ZVCMzPtwh+/YMJR+ZVCMzPtwvC/YEJR+ZVCzcz0wvC/YELO+ZVCMzPtwh+/YMJR+ZVCzcz0wvC/YELO+ZVCzcz0wh+/YMJR+ZVCMzPtwvC/YEKf+ZXCMzPtwh+/YEKf+ZXCzcz0wh+/YEJR+ZVCMzPtwvC/YEKf+ZXCzcz0wh+/YEJR+ZVCzcz0wvC/YEKf+ZXCMzPtwh+/YEKA+ZXCMzPtwvC/YMKA+ZXCzcz0wvC/YMKf+ZXCMzPtwh+/YEKA+ZXCzcz0wvC/YMKf+ZXCzcz0wh+/YELO+ZVCzcz0wh+/YMKA+ZXCzcz0wvC/YMKf+ZXCzcz0wh+/YELO+ZVCzcz0wh+/YMKf+ZXCzcz0wh+/YEJR+ZVCzcz0wvC/YEKA+ZXCZmb8wvC/YMLO+ZVCZmb8wh+/YMJR+ZVCZmb8wvC/YEKA+ZXCZmb8wvC/YMJR+ZVCZmb8wvC/YEKf+ZXCZmb8wh+/YEKA+ZXCzcz0wvC/YMLO+ZVCzcz0wh+/YMLO+ZVCZmb8wh+/YMKA+ZXCzcz0wvC/YMLO+ZVCZmb8wh+/YMKA+ZXCZmb8wvC/YMLO+ZVCzcz0wh+/YMJR+ZVCzcz0wvC/YEJR+ZVCZmb8wvC/YELO+ZVCzcz0wh+/YMJR+ZVCZmb8wvC/YELO+ZVCZmb8wh+/YMJR+ZVCzcz0wvC/YEKf+ZXCzcz0wh+/YEKf+ZXCZmb8wh+/YEJR+ZVCzcz0wvC/YEKf+ZXCZmb8wh+/YEJR+ZVCZmb8wvC/YEKf+ZXCzcz0wh+/YEKA+ZXCzcz0wvC/YMKA+ZXCZmb8wvC/YMKf+ZXCzcz0wh+/YEKA+ZXCZmb8wvC/YMKf+ZXCZmb8wh+/YELO+ZVCZmb8wh+/YMKA+ZXCZmb8wvC/YMKf+ZXCZmb8wh+/YELO+ZVCZmb8wh+/YMKf+ZXCZmb8wh+/YEJR+ZVCZmb8wvC/YEKA+ZXCAAACw/C/YMLO+ZVCAAACwx+/YMJR+ZVCAAACw/C/YEKA+ZXCAAACw/C/YMJR+ZVCAAACw/C/YEKf+ZXCAAACwx+/YEKA+ZXCZmb8wvC/YMLO+ZVCZmb8wh+/YMLO+ZVCAAACwx+/YMKA+ZXCZmb8wvC/YMLO+ZVCAAACwx+/YMKA+ZXCAAACw/C/YMLO+ZVCZmb8wh+/YMJR+ZVCZmb8wvC/YEJR+ZVCAAACw/C/YELO+ZVCZmb8wh+/YMJR+ZVCAAACw/C/YELO+ZVCAAACwx+/YMJR+ZVCZmb8wvC/YEKf+ZXCZmb8wh+/YEKf+ZXCAAACwx+/YEJR+ZVCZmb8wvC/YEKf+ZXCAAACwx+/YEJR+ZVCAAACw/C/YEKf+ZXCZmb8wh+/YEKA+ZXCZmb8wvC/YMKA+ZXCAAACw/C/YMKf+ZXCZmb8wh+/YEKA+ZXCAAACw/C/YMKf+ZXCAAACwx+/YELO+ZVCAAACwx+/YMKA+ZXCAAACw/C/YMKf+ZXCAAACwx+/YELO+ZVCAAACwx+/YMKf+ZXCAAACwx+/YEJR+ZVCAAACw/C/YEKA+ZXCzcwFw/C/YMLO+ZVCzcwFwx+/YMJR+ZVCzcwFw/C/YEKA+ZXCzcwFw/C/YMJR+ZVCzcwFw/C/YEKf+ZXCzcwFwx+/YEKA+ZXCAAACw/C/YMLO+ZVCAAACwx+/YMLO+ZVCzcwFwx+/YMKA+ZXCAAACw/C/YMLO+ZVCzcwFwx+/YMKA+ZXCzcwFw/C/YMLO+ZVCAAACwx+/YMJR+ZVCAAACw/C/YEJR+ZVCzcwFw/C/YELO+ZVCAAACwx+/YMJR+ZVCzcwFw/C/YELO+ZVCzcwFwx+/YMJR+ZVCAAACw/C/YEKf+ZXCAAACwx+/YEKf+ZXCzcwFwx+/YEJR+ZVCAAACw/C/YEKf+ZXCzcwFwx+/YEJR+ZVCzcwFw/C/YEKf+ZXCAAACwx+/YEKA+ZXCAAACw/C/YMKA+ZXCzcwFw/C/YMKf+ZXCAAACwx+/YEKA+ZXCzcwFw/C/YMKf+ZXCzcwFwx+/YELO+ZVCzcwFwx+/YMKA+ZXCzcwFw/C/YMKf+ZXCzcwFwx+/YELO+ZVCzcwFwx+/YMKf+ZXCzcwFwx+/YEJR+ZVCzcwFw/C/YEKA+ZXCmpkJw/C/YMLO+ZVCmpkJwx+/YMJR+ZVCmpkJw/C/YEKA+ZXCmpkJw/C/YMJR+ZVCmpkJw/C/YEKf+ZXCmpkJwx+/YEKA+ZXCzcwFw/C/YMLO+ZVCzcwFwx+/YMLO+ZVCmpkJwx+/YMKA+ZXCzcwFw/C/YMLO+ZVCmpkJwx+/YMKA+ZXCmpkJw/C/YMLO+ZVCzcwFwx+/YMJR+ZVCzcwFw/C/YEJR+ZVCmpkJw/C/YELO+ZVCzcwFwx+/YMJR+ZVCmpkJw/C/YELO+ZVCmpkJwx+/YMJR+ZVCzcwFw/C/YEKf+ZXCzcwFwx+/YEKf+ZXCmpkJwx+/YEJR+ZVCzcwFw/C/YEKf+ZXCmpkJwx+/YEJR+ZVCmpkJw/C/YEKf+ZXCzcwFwx+/YEKA+ZXCzcwFw/C/YMKA+ZXCmpkJw/C/YMKf+ZXCzcwFwx+/YEKA+ZXCmpkJw/C/YMKf+ZXCmpkJwx+/YELO+ZVCmpkJwx+/YMKA+ZXCmpkJw/C/YMKf+ZXCmpkJwx+/YELO+ZVCmpkJwx+/YMKf+ZXCmpkJwx+/YEJR+ZVCmpkJw/C/YEKA+ZXCZmYNw/C/YMLO+ZVCZmYNwx+/YMJR+ZVCZmYNw/C/YEKA+ZXCZmYNw/C/YMJR+ZVCZmYNw/C/YEKf+ZXCZmYNwx+/YEKA+ZXCmpkJw/C/YMLO+ZVCmpkJwx+/YMLO+ZVCZmYNwx+/YMKA+ZXCmpkJw/C/YMLO+ZVCZmYNwx+/YMKA+ZXCZmYNw/C/YMLO+ZVCmpkJwx+/YMJR+ZVCmpkJw/C/YEJR+ZVCZmYNw/C/YELO+ZVCmpkJwx+/YMJR+ZVCZmYNw/C/YELO+ZVCZmYNwx+/YMJR+ZVCmpkJw/C/YEKf+ZXCmpkJwx+/YEKf+ZXCZmYNwx+/YEJR+ZVCmpkJw/C/YEKf+ZXCZmYNwx+/YEJR+ZVCZmYNw/C/YEKf+ZXCmpkJwx+/YEKA+ZXCmpkJw/C/YMKA+ZXCZmYNw/C/YMKf+ZXCmpkJwx+/YEKA+ZXCZmYNw/C/YMKf+ZXCZmYNwx+/YELO+ZVCZmYNwx+/YMKA+ZXCZmYNw/C/YMKf+ZXCZmYNwx+/YELO+ZVCZmYNwx+/YMKf+ZXCZmYNwx+/YEJR+ZVCZmYNw/C/YEKA+ZXCMzMRw/C/YMLO+ZVCMzMRwx+/YMJR+ZVCMzMRw/C/YEKA+ZXCMzMRw/C/YMJR+ZVCMzMRw/C/YEKf+ZXCMzMRwx+/YEKA+ZXCZmYNw/C/YMLO+ZVCZmYNwx+/YMLO+ZVCMzMRwx+/YMKA+ZXCZmYNw/C/YMLO+ZVCMzMRwx+/YMKA+ZXCMzMRw/C/YMLO+ZVCZmYNwx+/YMJR+ZVCZmYNw/C/YEJR+ZVCMzMRw/C/YELO+ZVCZmYNwx+/YMJR+ZVCMzMRw/C/YELO+ZVCMzMRwx+/YMJR+ZVCZmYNw/C/YEKf+ZXCZmYNwx+/YEKf+ZXCMzMRwx+/YEJR+ZVCZmYNw/C/YEKf+ZXCMzMRwx+/YEJR+ZVCMzMRw/C/YEKf+ZXCZmYNwx+/YEKA+ZXCZmYNw/C/YMKA+ZXCMzMRw/C/YMKf+ZXCZmYNwx+/YEKA+ZXCMzMRw/C/YMKf+ZXCMzMRwx+/YELO+ZVCMzMRwx+/YMKA+ZXCMzMRw/C/YMKf+ZXCMzMRwx+/YELO+ZVCMzMRwx+/YMKf+ZXCMzMRwx+/YEJR+ZVCMzMRw/C/YEKA+ZXCAAAVw/C/YMLO+ZVCAAAVwx+/YMJR+ZVCAAAVw/C/YEKA+ZXCAAAVw/C/YMJR+ZVCAAAVw/C/YEKf+ZXCAAAVwx+/YEKA+ZXCMzMRw/C/YMLO+ZVCMzMRwx+/YMLO+ZVCAAAVwx+/YMKA+ZXCMzMRw/C/YMLO+ZVCAAAVwx+/YMKA+ZXCAAAVw/C/YMLO+ZVCMzMRwx+/YMJR+ZVCMzMRw/C/YEJR+ZVCAAAVw/C/YELO+ZVCMzMRwx+/YMJR+ZVCAAAVw/C/YELO+ZVCAAAVwx+/YMJR+ZVCMzMRw/C/YEKf+ZXCMzMRwx+/YEKf+ZXCAAAVwx+/YEJR+ZVCMzMRw/C/YEKf+ZXCAAAVwx+/YEJR+ZVCAAAVw/C/YEKf+ZXCMzMRwx+/YEKA+ZXCMzMRw/C/YMKA+ZXCAAAVw/C/YMKf+ZXCMzMRwx+/YEKA+ZXCAAAVw/C/YMKf+ZXCAAAVwx+/YELO+ZVCAAAVwx+/YMKA+ZXCAAAVw/C/YMKf+ZXCAAAVwx+/YELO+ZVCAAAVwx+/YMKf+ZXCAAAVwx+/YEJR+ZVCAAAVw/C/YEKA+ZXCzcwYw/C/YMLO+ZVCzcwYwx+/YMJR+ZVCzcwYw/C/YEKA+ZXCzcwYw/C/YMJR+ZVCzcwYw/C/YEKf+ZXCzcwYwx+/YEKA+ZXCAAAVw/C/YMLO+ZVCAAAVwx+/YMLO+ZVCzcwYwx+/YMKA+ZXCAAAVw/C/YMLO+ZVCzcwYwx+/YMKA+ZXCzcwYw/C/YMLO+ZVCAAAVwx+/YMJR+ZVCAAAVw/C/YEJR+ZVCzcwYw/C/YELO+ZVCAAAVwx+/YMJR+ZVCzcwYw/C/YELO+ZVCzcwYwx+/YMJR+ZVCAAAVw/C/YEKf+ZXCAAAVwx+/YEKf+ZXCzcwYwx+/YEJR+ZVCAAAVw/C/YEKf+ZXCzcwYwx+/YEJR+ZVCzcwYw/C/YEKf+ZXCAAAVwx+/YEKA+ZXCAAAVw/C/YMKA+ZXCzcwYw/C/YMKf+ZXCAAAVwx+/YEKA+ZXCzcwYw/C/YMKf+ZXCzcwYwx+/YEI=";
+
+    try {
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var blob = new Blob([bytes.buffer], { type: "model/gltf-binary" });
+        var url = URL.createObjectURL(blob);
+
+        document.getElementById("load-progress").textContent = "Loading 3D geometry...";
+        log("🔧 Loading GLB model...");
+
+        gltfLoader.load(url, function (gltf) {
+            loadedModel = gltf.scene;
+
+            loadedModel.traverse(function (child) {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material) {
+                        child.material.side = THREE.DoubleSide;
+                    }
+                }
+            });
+
+            scene.add(loadedModel);
+
+            // ── Animation Support ──
+            if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(loadedModel);
+                gltf.animations.forEach(function (clip) {
+                    mixer.clipAction(clip).play();
+                });
+                document.getElementById("anim-badge").classList.add("visible");
+                log("▶ " + gltf.animations.length + " animation(s) playing");
+            }
+
+            // ── Camera Fit ──
+            var box = new THREE.Box3().setFromObject(loadedModel);
+            var center = box.getCenter(new THREE.Vector3());
+            var size = box.getSize(new THREE.Vector3());
+            var maxDim = Math.max(size.x, size.y, size.z);
+
+            camera.position.set(center.x + maxDim, center.y + maxDim * 0.7, center.z + maxDim);
+            controls.target.copy(center);
+            controls.update();
+
+            ground.position.y = box.min.y;
+            gridHelper.position.y = box.min.y + 0.1;
+
+            // Hide loading overlay
+            document.getElementById("loading-overlay").classList.add("hidden");
+
+            log('✅ <span style="color:#10b981">Building Ready!</span> ' +
+                size.x.toFixed(0) + "×" + size.y.toFixed(0) + "×" + size.z.toFixed(0) + " m" +
+                (gltf.animations.length > 0 ? " · " + gltf.animations.length + " anim" : ""));
+
+            URL.revokeObjectURL(url);
+
+        }, function (progress) {
+            if (progress.total > 0) {
+                var pct = Math.round(progress.loaded / progress.total * 100);
+                document.getElementById("load-progress").textContent = "Loading... " + pct + "%";
+            }
+        }, function (err) {
+            document.getElementById("loading-overlay").classList.add("hidden");
+            log("❌ Load Error: " + err.message);
+            console.error(err);
+        });
+
+    } catch (e) {
+        document.getElementById("loading-overlay").classList.add("hidden");
+        log("❌ Decode Error: " + e.message);
+        console.error(e);
+    }
+
+    // ── Controls ──
+    window.resetCamera = function () {
+        if (!loadedModel) return;
+        var box = new THREE.Box3().setFromObject(loadedModel);
+        var c = box.getCenter(new THREE.Vector3());
+        var s = box.getSize(new THREE.Vector3());
+        var m = Math.max(s.x, s.y, s.z);
+        camera.position.set(c.x + m, c.y + m * 0.7, c.z + m);
+        controls.target.copy(c);
+        controls.update();
+        log("🎯 Focused on building");
+    };
+
+    window.toggleWireframe = function () {
+        wireframeMode = !wireframeMode;
+        if (loadedModel) loadedModel.traverse(function (c) {
+            if (c.isMesh && c.material) c.material.wireframe = wireframeMode;
+        });
+        log(wireframeMode ? "📐 Wireframe ON" : "📐 Wireframe OFF");
+    };
+
+    window.toggleAutoRotate = function () {
+        controls.autoRotate = !controls.autoRotate;
+        controls.autoRotateSpeed = 2.0;
+        log(controls.autoRotate ? "🔄 Auto-rotate ON" : "🔄 Auto-rotate OFF");
+    };
+
+    window.toggleGrid = function () {
+        gridVisible = !gridVisible;
+        gridHelper.visible = gridVisible;
+        log(gridVisible ? "🔲 Grid ON" : "🔲 Grid OFF");
+    };
+
+    // ── Resize ──
+    window.addEventListener("resize", function () {
+        var w = viewerPanel.clientWidth, h = viewerPanel.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    });
+
+    // ── Render Loop ──
+    (function animate() {
+        requestAnimationFrame(animate);
+        var delta = clock.getDelta();
+        if (mixer) mixer.update(delta);
+        controls.update();
+        renderer.render(scene, camera);
+    })();
+    </script>
+</body>
+</html>

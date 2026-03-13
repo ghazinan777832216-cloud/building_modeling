@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three.js Viewer</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  font-family: 'Arial', sans-serif;
+  font-size: 11px;
+  background: #1a1a1a;
+  color: #ccc;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* ── Menu Bar ── */
+#menubar {
+  height: 26px;
+  background: #222;
+  border-bottom: 1px solid #111;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.menu-item {
+  padding: 0 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #ccc;
+  position: relative;
+  font-size: 11px;
+}
+.menu-item:hover { background: #333; }
+.menu-item.active { background: #333; }
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #252525;
+  border: 1px solid #111;
+  min-width: 140px;
+  z-index: 1000;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+.menu-item.active .dropdown { display: block; }
+.dropdown-item {
+  padding: 5px 14px;
+  cursor: pointer;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.dropdown-item:hover { background: #333; }
+.dropdown-item.disabled { opacity: 0.4; pointer-events: none; }
+.dropdown-sep { height: 1px; background: #111; margin: 3px 0; }
+.menu-autosave {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  color: #aaa;
+  font-size: 11px;
+}
+.checkbox-wrap {
+  width: 13px; height: 13px;
+  background: #f44;
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── App Body ── */
+#app {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left Panel (Scene) ── */
+#left-panel {
+  width: 200px;
+  background: #1a1a1a;
+  border-right: 1px solid #111;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+#left-panel-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #aaa;
+  border-bottom: 1px solid #111;
+  background: #222;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+#scene-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.tree-item {
+  padding: 3px 10px 3px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #bbb;
+  font-size: 11px;
+}
+.tree-item:hover { background: #2a2a2a; }
+.tree-item.selected { background: #336; color: #fff; }
+.tree-item .icon { font-size: 10px; opacity: 0.7; flex-shrink: 0; }
+.tree-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Viewport ── */
+#viewport-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+#viewport-toolbar {
+  height: 28px;
+  background: #222;
+  border-bottom: 1px solid #111;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.vp-select {
+  background: #333;
+  border: 1px solid #444;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+  height: 20px;
+}
+.vp-select:hover { border-color: #666; }
+.vp-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.vp-tool-btn {
+  width: 22px; height: 22px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: #aaa;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+.vp-tool-btn:hover { background: #333; border-color: #444; }
+.vp-tool-btn.active { background: #336; border-color: #559; color: #fff; }
+
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #222;
+}
+#viewport canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* stats overlay */
+#stats-overlay {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: #888;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  line-height: 1.7;
+  pointer-events: none;
+}
+
+/* axes gizmo */
+#axes-gizmo {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 128px;
+  height: 128px;
+  pointer-events: none;
+}
+
+/* loading overlay */
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,26,26,0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: opacity 0.4s;
+}
+#loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid #333;
+  border-top-color: #888;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-text { color: #aaa; font-size: 11px; margin-top: 12px; }
+.load-sub { color: #666; font-size: 10px; margin-top: 4px; }
+
+/* ── Right Panel ── */
+#right-panel {
+  width: 220px;
+  background: #1a1a1a;
+  border-left: 1px solid #111;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Top section tabs */
+.rp-tabs {
+  display: flex;
+  background: #222;
+  border-bottom: 1px solid #111;
+  flex-shrink: 0;
+}
+.rp-tab {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  color: #888;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-right: 1px solid #111;
+}
+.rp-tab:last-child { border-right: none; }
+.rp-tab:hover { color: #ccc; }
+.rp-tab.active { color: #fff; background: #2a2a2a; border-bottom: 2px solid #fff; }
+
+.rp-panel { display: none; flex: 1; overflow-y: auto; padding: 8px 0; }
+.rp-panel.active { display: block; }
+
+/* property rows */
+.prop-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  gap: 6px;
+  color: #aaa;
+  font-size: 11px;
+}
+.prop-label { flex: 0 0 90px; color: #888; }
+.prop-value {
+  flex: 1;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  min-width: 0;
+}
+.prop-select {
+  flex: 1;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+.prop-checkbox {
+  width: 14px; height: 14px;
+  cursor: pointer;
+  accent-color: #f44;
+}
+.prop-section {
+  padding: 5px 10px 3px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+.prop-btn {
+  flex: 1;
+  background: #333;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  display: block;
+  width: calc(100% - 20px);
+  margin: 0 10px 2px;
+}
+.prop-btn:hover { background: #3a3a3a; }
+
+/* Bottom rp section */
+#rp-bottom {
+  border-top: 1px solid #111;
+  flex-shrink: 0;
+}
+.rp-btabs {
+  display: flex;
+  background: #222;
+}
+.rp-btab {
+  flex: 1;
+  text-align: center;
+  padding: 5px 4px;
+  cursor: pointer;
+  color: #888;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-right: 1px solid #111;
+}
+.rp-btab:last-child { border-right: none; }
+.rp-btab.active { color: #fff; background: #2a2a2a; }
+.rp-bcontent {
+  height: 120px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  color: #777;
+  font-size: 10px;
+}
+.rp-assign-btn {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 4px 10px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 2px;
+}
+.rp-assign-btn:hover { background: #333; }
+
+/* ── Bottom Bar (playback) ── */
+#bottombar {
+  height: 28px;
+  background: #222;
+  border-top: 1px solid #111;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.play-btn {
+  width: 22px; height: 22px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 2px;
+  color: #aaa;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.play-btn:hover { background: #3a3a3a; color: #fff; }
+#anim-time {
+  color: #666;
+  font-size: 10px;
+  font-family: monospace;
+  margin-left: 4px;
+}
+
+/* scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+</style>
+</head>
+<body>
+
+<!-- ── Menu Bar ── -->
+<div id="menubar">
+  <div class="menu-item" id="menu-file" onclick="toggleMenu('file')">File
+    <div class="dropdown" id="drop-file">
+      <div class="dropdown-item" onclick="openInBrowser()">🌐 Open in Browser</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">New Scene</div>
+      <div class="dropdown-item disabled">Import</div>
+      <div class="dropdown-item disabled">Export GLB</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-edit" onclick="toggleMenu('edit')">Edit
+    <div class="dropdown" id="drop-edit">
+      <div class="dropdown-item disabled">Undo</div>
+      <div class="dropdown-item disabled">Redo</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item" onclick="resetCamera()">🎯 Focus Camera</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-add" onclick="toggleMenu('add')">Add
+    <div class="dropdown" id="drop-add">
+      <div class="dropdown-item disabled">Mesh</div>
+      <div class="dropdown-item disabled">Light</div>
+      <div class="dropdown-item disabled">Camera</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-view" onclick="toggleMenu('view')">View
+    <div class="dropdown" id="drop-view">
+      <div class="dropdown-item" onclick="toggleGrid()">🔲 Toggle Grid</div>
+      <div class="dropdown-item" onclick="toggleWireframe()">📐 Toggle Wireframe</div>
+      <div class="dropdown-item" onclick="toggleAutoRotate()">🔄 Auto Rotate</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">Full Screen</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-render" onclick="toggleMenu('render')">Render
+    <div class="dropdown" id="drop-render">
+      <div class="dropdown-item disabled">Render Image</div>
+      <div class="dropdown-item disabled">Render Video</div>
+    </div>
+  </div>
+  <div class="menu-item" id="menu-help" onclick="toggleMenu('help')">Help
+    <div class="dropdown" id="drop-help">
+      <div class="dropdown-item" onclick="openInBrowser()">🌐 Open in Browser</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item disabled">About</div>
+    </div>
+  </div>
+  <div class="menu-autosave">
+    <div class="checkbox-wrap">✓</div>
+    autosave &nbsp;<span id="revision-label" style="color:#666">r1</span>
+  </div>
+</div>
+
+<!-- ── App Body ── -->
+<div id="app">
+
+  <!-- ── Left Panel ── -->
+  <div id="left-panel">
+    <div id="left-panel-header">Scene</div>
+    <div id="scene-tree">
+      <div class="tree-item selected" id="tree-scene">
+        <span class="icon">☰</span>
+        <span class="name">Scene</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Viewport ── -->
+  <div id="viewport-wrap">
+    <div id="viewport-toolbar">
+      <select class="vp-select" id="cam-select" onchange="switchCamera(this.value)">
+        <option value="perspective">CAMERA</option>
+        <option value="top">TOP</option>
+        <option value="front">FRONT</option>
+        <option value="side">SIDE</option>
+      </select>
+      <select class="vp-select" id="render-mode" onchange="switchRenderMode(this.value)">
+        <option value="solid">SOLID</option>
+        <option value="wireframe">WIREFRAME</option>
+        <option value="material">MATERIAL</option>
+      </select>
+      <div class="vp-tools">
+        <button class="vp-tool-btn active" id="btn-translate" title="Translate" onclick="setTool('translate')">✛</button>
+        <button class="vp-tool-btn" id="btn-rotate" title="Rotate" onclick="setTool('rotate')">↻</button>
+        <button class="vp-tool-btn" id="btn-scale" title="Scale" onclick="setTool('scale')">⤢</button>
+      </div>
+    </div>
+
+    <div id="viewport">
+      <!-- Loading Overlay -->
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="load-text">Loading Model...</div>
+        <div class="load-sub" id="load-sub">Initializing</div>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-overlay">
+        <div id="stat-objects">0 objects</div>
+        <div id="stat-verts">0 vertices</div>
+        <div id="stat-tris">0 triangles</div>
+        <div id="stat-render">- render time</div>
+      </div>
+
+      <!-- Axes gizmo canvas -->
+      <canvas id="axes-gizmo" width="80" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Right Panel ── -->
+  <div id="right-panel">
+
+    <!-- Top tabs: SCENE / PROJECT / SETTINGS -->
+    <div class="rp-tabs">
+      <div class="rp-tab active" onclick="switchRpTab('scene', this)">SCENE</div>
+      <div class="rp-tab" onclick="switchRpTab('project', this)">PROJECT</div>
+      <div class="rp-tab" onclick="switchRpTab('settings', this)">SETTINGS</div>
+    </div>
+
+    <!-- SCENE panel -->
+    <div class="rp-panel active" id="rp-scene">
+      <div class="prop-section">Background</div>
+      <div class="prop-row">
+        <span class="prop-label">Color</span>
+        <input type="color" value="#1a1a1a" class="prop-value" style="cursor:pointer;padding:1px" onchange="setBgColor(this.value)">
+      </div>
+      <div class="prop-section">Fog</div>
+      <div class="prop-row">
+        <span class="prop-label">Type</span>
+        <select class="prop-select">
+          <option>None</option>
+          <option>Linear</option>
+          <option>Exponential</option>
+        </select>
+      </div>
+      <div class="prop-section">Environment</div>
+      <div class="prop-row">
+        <span class="prop-label">Texture</span>
+        <select class="prop-select"><option>None</option></select>
+      </div>
+    </div>
+
+    <!-- PROJECT panel -->
+    <div class="rp-panel" id="rp-project">
+      <div class="prop-section">Renderer</div>
+      <div class="prop-row">
+        <span class="prop-label">Renderer</span>
+        <select class="prop-select"><option>WebGL</option><option>WebGPU</option></select>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Antialias</span>
+        <input type="checkbox" class="prop-checkbox" checked>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Shadows</span>
+        <input type="checkbox" class="prop-checkbox" checked>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Shadow type</span>
+        <select class="prop-select"><option>PCF</option><option>PCFSoft</option><option>VSM</option></select>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Tonemapping</span>
+        <select class="prop-select" onchange="setToneMapping(this.value)">
+          <option value="0">None</option>
+          <option value="1">Linear</option>
+          <option value="2" selected>Reinhard</option>
+          <option value="3">Cineon</option>
+          <option value="4">ACES</option>
+        </select>
+      </div>
+      <div class="prop-section">APP</div>
+      <div class="prop-row">
+        <span class="prop-label">Title</span>
+        <input type="text" value="" class="prop-value" placeholder="Scene title">
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Editable</span>
+        <input type="checkbox" class="prop-checkbox">
+      </div>
+      <div style="height:6px"></div>
+      <button class="prop-btn" onclick="openInBrowser()">🌐 OPEN IN BROWSER</button>
+      <button class="prop-btn">PUBLISH</button>
+    </div>
+
+    <!-- SETTINGS panel -->
+    <div class="rp-panel" id="rp-settings">
+      <div class="prop-section">Language</div>
+      <div class="prop-row">
+        <span class="prop-label">Language</span>
+        <select class="prop-select"><option>English</option><option>Arabic</option></select>
+      </div>
+      <div class="prop-section">Display</div>
+      <div class="prop-row">
+        <span class="prop-label">Grid size</span>
+        <input type="number" value="30" class="prop-value">
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Grid Div.</span>
+        <input type="number" value="30" class="prop-value">
+      </div>
+      <div class="prop-section">Controls</div>
+      <div class="prop-row" style="font-size:10px;color:#666;line-height:1.6">
+        Left drag: Orbit<br>
+        Right drag: Pan<br>
+        Scroll: Zoom
+      </div>
+    </div>
+
+    <!-- Bottom section: GEOMETRIES / MATERIALS / TEXTURES -->
+    <div id="rp-bottom">
+      <div class="rp-btabs">
+        <div class="rp-btab active" onclick="switchBTab('geometries', this)">GEOMETRIES</div>
+        <div class="rp-btab" onclick="switchBTab('materials', this)">MATERIALS</div>
+        <div class="rp-btab" onclick="switchBTab('textures', this)">TEXTURES</div>
+      </div>
+      <div class="rp-bcontent" id="btab-geometries"></div>
+      <div class="rp-bcontent" id="btab-materials" style="display:none"></div>
+      <div class="rp-bcontent" id="btab-textures" style="display:none"></div>
+      <button class="rp-assign-btn">ASSIGN</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Bottom Playback Bar ── -->
+<div id="bottombar">
+  <button class="play-btn" id="btn-play" onclick="togglePlay()" title="Play">▶</button>
+  <button class="play-btn" onclick="stopAnim()" title="Stop">■</button>
+  <button class="play-btn" onclick="stepFrame()" title="Step Frame">⏭</button>
+  <span id="anim-time">0.00 / 0.00</span>
+</div>
+
+<!-- ── Three.js Import Map ── -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader }   from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+/* ── State ── */
+let scene, camera, renderer, controls, mixer;
+let clock = new THREE.Clock();
+let loadedModel = null;
+let wireframeMode = false;
+let gridVisible = true;
+let animPlaying = false;
+let animDuration = 0;
+let animTime    = 0;
+let revisionNum = 1;
+let renderMode  = 'solid';
+let originalMaterials = new Map();
+
+const vp = document.getElementById('viewport');
+
+/* ── Scene ── */
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+/* ── Camera ── */
+camera = new THREE.PerspectiveCamera(50, vp.clientWidth / vp.clientHeight, 0.1, 10000);
+camera.position.set(150, 120, 200);
+
+/* ── Renderer ── */
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(vp.clientWidth, vp.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+vp.appendChild(renderer.domElement);
+
+/* ── Controls ── */
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+/* ── Grid ── */
+const grid = new THREE.GridHelper(300, 30, 0x444444, 0x333333);
+scene.add(grid);
+
+/* ── Lighting ── */
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+const dirA = new THREE.DirectionalLight(0xffffff, 1.2);
+dirA.position.set(100, 200, 100);
+dirA.castShadow = true;
+dirA.shadow.mapSize.set(2048, 2048);
+dirA.shadow.camera.left  = -300;
+dirA.shadow.camera.right =  300;
+dirA.shadow.camera.top   =  300;
+dirA.shadow.camera.bottom= -300;
+dirA.shadow.camera.far   =  1000;
+dirA.shadow.bias = -0.0005;
+scene.add(dirA);
+
+const dirB = new THREE.DirectionalLight(0xfff0e0, 0.35);
+dirB.position.set(-80, 100, -60);
+scene.add(dirB);
+
+/* ── Load Model ── */
+document.getElementById('load-sub').textContent = 'Decoding model…';
+
+const b64 = "%%MODEL_B64%%";
+
+(async () => {
+  try {
+    const binary = atob(b64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob   = new Blob([bytes.buffer], { type: 'model/gltf-binary' });
+    const url    = URL.createObjectURL(blob);
+
+    document.getElementById('load-sub').textContent = 'Parsing geometry…';
+
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
+    loader.setMeshoptDecoder(MeshoptDecoder);
+
+    loader.load(url, gltf => {
+      loadedModel = gltf.scene;
+
+      let verts = 0, tris = 0, objs = 0;
+      loadedModel.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          if (child.material) {
+            child.material.side = THREE.DoubleSide;
+            originalMaterials.set(child.uuid, child.material.clone ? child.material.clone() : child.material);
+          }
+          if (child.geometry) {
+            verts += child.geometry.attributes.position
+              ? child.geometry.attributes.position.count : 0;
+            tris += child.geometry.index
+              ? child.geometry.index.count / 3
+              : (child.geometry.attributes.position ? child.geometry.attributes.position.count / 3 : 0);
+          }
+          objs++;
+        }
+      });
+
+      scene.add(loadedModel);
+      populateSceneTree(loadedModel);
+      populateSideTabs(loadedModel);
+
+      // Camera fit
+      const box    = new THREE.Box3().setFromObject(loadedModel);
+      const center = box.getCenter(new THREE.Vector3());
+      const size   = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      camera.position.set(center.x + maxDim, center.y + maxDim * 0.65, center.z + maxDim * 1.2);
+      controls.target.copy(center);
+      controls.update();
+      grid.position.y = box.min.y;
+
+      // Animations
+      if (gltf.animations && gltf.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(loadedModel);
+        gltf.animations.forEach(clip => mixer.clipAction(clip).play());
+        animDuration = gltf.animations[0].duration;
+        animPlaying  = true;
+        document.getElementById('btn-play').textContent = '⏸';
+      }
+
+      // Stats
+      document.getElementById('stat-objects').textContent = objs + ' objects';
+      document.getElementById('stat-verts').textContent   = Math.round(verts).toLocaleString() + ' vertices';
+      document.getElementById('stat-tris').textContent    = Math.round(tris).toLocaleString() + ' triangles';
+
+      document.getElementById('loading-overlay').classList.add('hidden');
+      revisionNum++;
+      document.getElementById('revision-label').textContent = 'r' + revisionNum;
+      URL.revokeObjectURL(url);
+
+    }, progress => {
+      if (progress.total > 0) {
+        const pct = Math.round(progress.loaded / progress.total * 100);
+        document.getElementById('load-sub').textContent = 'Loading… ' + pct + '%';
+      }
+    }, err => {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      console.error(err);
+    });
+
+  } catch (e) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    console.error(e);
+  }
+})();
+
+/* ── Scene Tree ── */
+function populateSceneTree(model) {
+  const tree = document.getElementById('scene-tree');
+
+  function addNode(obj, depth) {
+    if (obj.name === '' && obj.children.length === 0) return;
+    const el = document.createElement('div');
+    el.className = 'tree-item';
+    el.style.paddingLeft = (18 + depth * 12) + 'px';
+    const icon = obj.isMesh ? '◼' : (obj.isLight ? '☀' : '⬡');
+    el.innerHTML = `<span class="icon">${icon}</span><span class="name">${obj.name || obj.type}</span>`;
+    el.onclick = () => {
+      document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+    };
+    tree.appendChild(el);
+    obj.children.forEach(c => addNode(c, depth + 1));
+  }
+
+  addNode(model, 1);
+}
+
+/* ── Side Tab Lists ── */
+const geoSet = new Set(), matSet = new Set(), texSet = new Set();
+function populateSideTabs(model) {
+  model.traverse(child => {
+    if (child.isMesh && child.geometry) {
+      geoSet.add(child.geometry.uuid.slice(0,8));
+    }
+    if (child.isMesh && child.material) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(m => {
+        matSet.add(m.name || m.type);
+        if (m.map) texSet.add('Texture');
+        if (m.normalMap) texSet.add('NormalMap');
+        if (m.roughnessMap) texSet.add('RoughnessMap');
+      });
+    }
+  });
+
+  const fill = (id, set) => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    set.forEach(v => {
+      const d = document.createElement('div');
+      d.style.cssText = 'padding:2px 0;color:#777;';
+      d.textContent = v;
+      el.appendChild(d);
+    });
+  };
+  fill('btab-geometries', geoSet);
+  fill('btab-materials',  matSet);
+  fill('btab-textures',   texSet);
+}
+
+/* ── Axes Gizmo ── */
+const gizmoCanvas = document.getElementById('axes-gizmo');
+gizmoCanvas.width  = 128;
+gizmoCanvas.height = 128;
+const gizCtx = gizmoCanvas.getContext('2d');
+
+function drawGizmo() {
+  const W = gizmoCanvas.width, H = gizmoCanvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R  = 46; // arm length in px
+
+  gizCtx.clearRect(0, 0, W, H);
+
+  const mat = new THREE.Matrix4().extractRotation(camera.matrixWorldInverse);
+
+  const axes = [
+    { dir: new THREE.Vector3( 1, 0, 0), label: 'X', col: '#ff3333' },
+    { dir: new THREE.Vector3( 0, 1, 0), label: 'Y', col: '#33ff55' },
+    { dir: new THREE.Vector3( 0, 0, 1), label: 'Z', col: '#3399ff' },
+  ].map(a => {
+    const v = a.dir.clone().applyMatrix4(mat);
+    return { ...a, vx: v.x, vy: v.y, vz: v.z };
+  });
+
+  // Sort back-to-front so closer axes paint on top
+  axes.sort((a, b) => a.vz - b.vz);
+
+  axes.forEach(a => {
+    const tx = cx + a.vx * R;
+    const ty = cy - a.vy * R;
+    const depth = (a.vz + 1) / 2; // 0 = back, 1 = front
+    const alpha = 0.35 + 0.65 * depth;
+
+    // Glow effect
+    gizCtx.shadowColor = a.col;
+    gizCtx.shadowBlur  = 8;
+
+    // Shaft
+    gizCtx.beginPath();
+    gizCtx.moveTo(cx, cy);
+    gizCtx.lineTo(tx, ty);
+    gizCtx.strokeStyle = a.col;
+    gizCtx.globalAlpha = alpha;
+    gizCtx.lineWidth   = 3;
+    gizCtx.lineCap     = 'round';
+    gizCtx.stroke();
+
+    // Arrowhead (filled circle at tip)
+    gizCtx.beginPath();
+    gizCtx.arc(tx, ty, 5, 0, Math.PI * 2);
+    gizCtx.fillStyle = a.col;
+    gizCtx.fill();
+
+    // Label
+    gizCtx.shadowBlur  = 0;
+    gizCtx.font        = 'bold 13px Arial';
+    gizCtx.fillStyle   = a.col;
+    gizCtx.globalAlpha = alpha;
+    gizCtx.textAlign   = 'center';
+    gizCtx.textBaseline= 'middle';
+    const lx = cx + a.vx * (R + 14);
+    const ly = cy - a.vy * (R + 14);
+    gizCtx.fillText(a.label, lx, ly);
+
+    // Reset
+    gizCtx.globalAlpha = 1;
+    gizCtx.shadowBlur  = 0;
+  });
+
+  // Centre dot
+  gizCtx.beginPath();
+  gizCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+  gizCtx.fillStyle = '#ffffff';
+  gizCtx.fill();
+}
+
+/* ── Render Loop ── */
+let lastTime = performance.now();
+(function animate() {
+  requestAnimationFrame(animate);
+  const now   = performance.now();
+  const delta = (now - lastTime) / 1000;
+  lastTime = now;
+
+  if (mixer && animPlaying) {
+    mixer.update(delta);
+    animTime = (animTime + delta) % (animDuration || 1);
+    document.getElementById('anim-time').textContent =
+      animTime.toFixed(2) + ' / ' + (animDuration || 0).toFixed(2);
+  }
+  controls.update();
+
+  const t0 = performance.now();
+  renderer.render(scene, camera);
+  const renderMs = (performance.now() - t0).toFixed(1);
+  document.getElementById('stat-render').textContent = renderMs + ' ms render time';
+
+  drawGizmo();
+})();
+
+/* ── Resize ── */
+window.addEventListener('resize', () => {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+/* ── Exposed Controls ── */
+window.resetCamera = function() {
+  if (!loadedModel) return;
+  const box    = new THREE.Box3().setFromObject(loadedModel);
+  const center = box.getCenter(new THREE.Vector3());
+  const size   = box.getSize(new THREE.Vector3());
+  const m      = Math.max(size.x, size.y, size.z);
+  camera.position.set(center.x + m, center.y + m * 0.65, center.z + m * 1.2);
+  controls.target.copy(center);
+  controls.update();
+};
+
+window.toggleGrid = function() {
+  gridVisible = !gridVisible;
+  grid.visible = gridVisible;
+};
+
+window.toggleWireframe = function() {
+  wireframeMode = !wireframeMode;
+  if (loadedModel) loadedModel.traverse(child => {
+    if (child.isMesh && child.material) child.material.wireframe = wireframeMode;
+  });
+  // keep render-mode select in sync
+  document.getElementById('render-mode').value = wireframeMode ? 'wireframe' : 'solid';
+};
+
+window.toggleAutoRotate = function() {
+  controls.autoRotate = !controls.autoRotate;
+  controls.autoRotateSpeed = 1.5;
+};
+
+window.switchCamera = function(val) {
+  if (!loadedModel) return;
+  const box    = new THREE.Box3().setFromObject(loadedModel);
+  const center = box.getCenter(new THREE.Vector3());
+  const m      = Math.max(...box.getSize(new THREE.Vector3()).toArray()) * 1.5;
+  if (val === 'top') {
+    camera.position.set(center.x, center.y + m, center.z);
+  } else if (val === 'front') {
+    camera.position.set(center.x, center.y, center.z + m);
+  } else if (val === 'side') {
+    camera.position.set(center.x + m, center.y, center.z);
+  } else {
+    window.resetCamera();
+  }
+  controls.target.copy(center);
+  controls.update();
+};
+
+window.switchRenderMode = function(val) {
+  renderMode = val;
+  if (!loadedModel) return;
+  if (val === 'wireframe') {
+    loadedModel.traverse(c => { if (c.isMesh && c.material) c.material.wireframe = true; });
+    wireframeMode = true;
+  } else if (val === 'solid') {
+    loadedModel.traverse(c => {
+      if (c.isMesh && c.material) {
+        c.material.wireframe = false;
+        const orig = originalMaterials.get(c.uuid);
+        if (orig) c.material = orig.clone ? orig.clone() : orig;
+      }
+    });
+    wireframeMode = false;
+  } else if (val === 'material') {
+    loadedModel.traverse(c => { if (c.isMesh && c.material) c.material.wireframe = false; });
+    wireframeMode = false;
+  }
+};
+
+window.setBgColor = function(hex) {
+  scene.background = new THREE.Color(hex);
+};
+
+window.setToneMapping = function(val) {
+  const maps = [THREE.NoToneMapping, THREE.LinearToneMapping, THREE.ReinhardToneMapping,
+                THREE.CineonToneMapping, THREE.ACESFilmicToneMapping];
+  renderer.toneMapping = maps[+val] || THREE.ReinhardToneMapping;
+};
+
+window.setTool = function(t) {
+  document.querySelectorAll('.vp-tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + t).classList.add('active');
+};
+
+/* ── Animation ── */
+window.togglePlay = function() {
+  if (!mixer) return;
+  animPlaying = !animPlaying;
+  if (animPlaying) {
+    mixer.timeScale = 1;
+    document.getElementById('btn-play').textContent = '⏸';
+  } else {
+    document.getElementById('btn-play').textContent = '▶';
+  }
+};
+window.stopAnim = function() {
+  if (!mixer) return;
+  animPlaying = false;
+  animTime    = 0;
+  mixer.setTime(0);
+  document.getElementById('btn-play').textContent = '▶';
+  document.getElementById('anim-time').textContent = '0.00 / ' + (animDuration || 0).toFixed(2);
+};
+window.stepFrame = function() {
+  if (!mixer) return;
+  animTime = Math.min(animTime + 1/30, animDuration);
+  mixer.setTime(animTime);
+};
+
+/* ── Open in Browser ── */
+window.openInBrowser = function() {
+  window.open(window.location.href, '_blank');
+};
+</script>
+
+<!-- ── UI Scripts (non-module) ── -->
+<script>
+/* Menu toggles */
+function toggleMenu(id) {
+  const active = document.querySelector('.menu-item.active');
+  const clicked = document.getElementById('menu-' + id);
+  if (active === clicked) {
+    clicked.classList.remove('active');
+  } else {
+    if (active) active.classList.remove('active');
+    clicked.classList.add('active');
+  }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu-item')) {
+    const active = document.querySelector('.menu-item.active');
+    if (active) active.classList.remove('active');
+  }
+});
+
+/* Right panel top tabs */
+function switchRpTab(name, el) {
+  document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rp-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rp-' + name).classList.add('active');
+}
+
+/* Right panel bottom tabs */
+function switchBTab(name, el) {
+  document.querySelectorAll('.rp-btab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rp-bcontent').forEach(p => p.style.display = 'none');
+  el.classList.add('active');
+  document.getElementById('btab-' + name).style.display = 'block';
+}
+</script>
+
+</body>
+</html>
